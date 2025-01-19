@@ -148,8 +148,9 @@ def make_compat_data_v1(data, timestamp, step):
         i = {
             "time": int(timestamp * 1000),  # convert to ms
             "step": int(step),
-            "metric": k,
-            "value": v,
+            "data": {
+                k: v,
+            },
         }
         batch.append(json.dumps(i))
     return ("\n".join(batch) + "\n").encode("utf-8")
