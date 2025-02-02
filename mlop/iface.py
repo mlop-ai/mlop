@@ -16,6 +16,7 @@ class ServerInterface:
     def __init__(self, settings: Settings) -> None:
         self.url_data = settings.url_data
         self.url_file = settings.url_file
+        self.url_status = settings.url_status
         self.url_view_op = (
             f"{settings.url_view}/{settings.user}/{settings.project}/{settings._op_id}"
         )
@@ -64,6 +65,17 @@ class ServerInterface:
         self._thread_data = None
         self._thread_file = None
         self._thread_storage = None
+
+        r = self._post_v1(
+            self.url_status,
+            self.headers,
+            make_compat_status_v1("INIT", settings.system, settings),
+            client=self.client,
+        )
+        try:
+            logger.info(f"{tag}: started: {r.json()['message'].lower()}")
+        except Exception as e:
+            logger.critical("%s: failed to start: %s", tag, e)
 
     def start(self) -> None:
         if self._thread_data is None:
@@ -259,3 +271,16 @@ def make_compat_storage_v1(f, fl):
         if next(iter(i.keys())) == f"{f._name}{f._ext}":
             return next(iter(i.values()))
     return None
+
+
+def make_compat_status_v1(status, data, settings):
+    return json.dumps(
+        {
+            "status": status,
+            "data": {
+                "run_id": settings._op_id,
+                "run_name": settings._op_name,
+                "metadata": data,
+            },
+        }
+    ).encode()

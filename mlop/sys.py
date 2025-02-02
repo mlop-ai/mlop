@@ -36,8 +36,8 @@ class System:
         else:
             return None
 
-    def info(self):
-        return {
+    def info(self, debug=False):
+        d = {
             "platform": self.uname,
             "cpu": {
                 "physical": self.cpu_count(logical=False),
@@ -51,8 +51,13 @@ class System:
                 "virtual": to_human(self.svmem["total"]),
                 "swap": to_human(self.sswap["total"]),
             },
-            "disk": self.disk,
-            "network": self.net_if_addrs,
             "boot_time": self.boot_time,
-            "users": self.users,
         }
+        if debug:
+            d = {
+                **d,
+                "disk": self.disk,
+                "network": self.net_if_addrs,
+                "users": self.users,
+            }
+        return d

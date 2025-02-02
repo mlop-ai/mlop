@@ -15,6 +15,7 @@ class Settings:
     project: str = "default"
     mode: str = "perf"  # noop | debug | perf
     heartbeat_seconds: int = 2**2
+    system: dict[str, any] = {}
     disable_store: bool = False
     disable_iface: bool = False
 
@@ -43,6 +44,7 @@ class Settings:
     url: str = "http://localhost:3000"
     url_data: str = f"{url}/ingest/metrics"
     url_file: str = f"{url}/files"
+    url_status: str = f"{url}/status"
     url_view: str = f"{url}/view"
 
     def update(self, settings) -> None:

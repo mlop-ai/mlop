@@ -78,7 +78,7 @@ class Ops:
             try:
                 self._log(*self._queue.get(block=False))
             except queue.Empty:
-                continue # TODO: reduce resource usage
+                continue # TODO: reduce resource usage with debounce
             except Exception as e:
                 logger.critical("%s: failed: %s", TAG, e)
                 raise e

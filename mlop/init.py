@@ -82,10 +82,13 @@ class OpsInit:
         console.addHandler(file_handler)
         sys.stdout = StreamHandler(console, logging.INFO, sys.stdout, "stdout")
         sys.stderr = StreamHandler(console, logging.ERROR, sys.stderr, "stderr")
-        if self.settings.mode == "debug":
-            builtins.input = lambda prompt="": input_hook(prompt, logger=console)
 
-        to_json([System().info()], f"{self.settings.work_dir()}/sys.json")
+        if self.settings.mode == "debug":
+            self.settings.system = System().info(debug=True)
+            builtins.input = lambda prompt="": input_hook(prompt, logger=console)
+        else:
+            self.settings.system = System().info()
+        to_json([self.settings.system], f"{self.settings.work_dir()}/sys.json")
 
 
 def init(

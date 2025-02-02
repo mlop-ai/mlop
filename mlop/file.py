@@ -13,6 +13,8 @@ from .util import get_class
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 
+VALID_CHAR = re.compile(r"^[a-zA-Z0-9_\-.]+$")
+INVALID_CHAR = re.compile(r"[^a-zA-Z0-9_\-.]")
 
 class File:
     def __init__(
@@ -25,12 +27,12 @@ class File:
 
         if not name:
             name = self._id
-        elif not re.match(r"^[a-zA-Z0-9_\-.]+$", name):
+        elif not VALID_CHAR.match(name):
             e = ValueError(
-                f"invalid file name: {name}; file name must only contain alphanumeric characters, dashes, underscores, and periods"
+                f"invalid file name: {name}; file name may only contain alphanumeric characters, dashes, underscores, and periods; proceeding with sanitized name"
             )
             logger.warning("File: %s", e)
-            name = re.sub(r"[^a-zA-Z0-9_\-.]", "-", name)  # raise e
+            name = INVALID_CHAR.sub("-", name)
         self._name = name
         self._ext = os.path.splitext(self._path)[-1]
         self._type = self._mimetype()
