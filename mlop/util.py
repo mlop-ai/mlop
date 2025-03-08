@@ -1,11 +1,27 @@
-from typing import Union, Sequence
 import json
 import logging
 import os
+import random
+import string
+import time
+from typing import Sequence, Union
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Util"
 
+
+def gen_id(length=8) -> str:
+    base = string.ascii_lowercase + string.ascii_uppercase + string.digits
+    return ''.join(random.choice(base) for _ in range(length))
+
+def gen_ulid(base="0123456789ABCDEFGHJKMNPQRSTVWXYZ") -> str:  # py-ulid
+    ulid = (int(time.time() * 1000) << 80) | random.getrandbits(80)
+
+    encoded = []
+    while ulid > 0:
+        ulid, remainder = divmod(ulid, 32)
+        encoded.append(base[remainder])
+    return "".join(encoded[::-1]).rjust(26, base[0])
 
 def to_dict(obj):
     attrs = {}

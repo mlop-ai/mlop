@@ -1,18 +1,15 @@
-from datetime import datetime
 import builtins
 import logging
 import os
-import queue
-import random
 import sys
-import time
+from datetime import datetime
 
 from . import sets
 from .log import ColorFormatter, ConsoleHandler, input_hook
 from .ops import Ops
 from .sets import Settings
 from .sys import System
-from .util import to_json
+from .util import gen_id, to_json
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Init"
@@ -108,7 +105,7 @@ def init(
     settings.project = project if project else settings.project
 
     settings._op_name = name if name else datetime.now().strftime("%Y%m%d")
-    settings._op_id = id if id else gen_ulid()
+    settings._op_id = id if id else gen_id()
 
     try:
         op = OpsInit()
@@ -117,13 +114,3 @@ def init(
     except Exception as e:
         logger.critical("%s: failed, %s", tag, e)  # add early logger
         raise e
-
-
-def gen_ulid(base="0123456789ABCDEFGHJKMNPQRSTVWXYZ") -> str:  # py-ulid
-    ulid = (int(time.time() * 1000) << 80) | random.getrandbits(80)
-
-    encoded = []
-    while ulid > 0:
-        ulid, remainder = divmod(ulid, 32)
-        encoded.append(base[remainder])
-    return "".join(encoded[::-1]).rjust(26, base[0])
