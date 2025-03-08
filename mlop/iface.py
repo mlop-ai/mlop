@@ -49,7 +49,6 @@ class ServerInterface:
         )
 
         self._stop_event = threading.Event()
-        self._thread_monitor = None
 
         self._queue_data = queue.Queue()
         self._buffer_data = None
@@ -62,15 +61,6 @@ class ServerInterface:
         self._thread_message = None
 
     def start(self) -> None:
-        if self._thread_monitor is None:
-            self._thread_monitor = threading.Thread(
-                target=self._worker_monitor,
-                args=(
-                    self._stop_event.is_set,
-                ),
-                daemon=True,
-            )
-            self._thread_monitor.start()
         if self._thread_data is None:
             self._thread_data = threading.Thread(
                 target=self._worker_publish,
@@ -132,7 +122,6 @@ class ServerInterface:
     def stop(self) -> None:
         self._stop_event.set()
         for t in [
-            self._thread_monitor,
             self._thread_data,
             self._thread_file,
             self._thread_storage,
@@ -142,15 +131,6 @@ class ServerInterface:
                 t.join(timeout=self.settings.x_internal_check_process)
                 t = None
         logger.info(f"{tag}: find uploaded data at {self.url_view}")
-    
-    def _worker_monitor(self, stop):
-        step = 0
-        while not stop():
-            step += 1
-            self._queue_data.put(
-                make_compat_data_v1(self.settings.system.monitor(), int(time.time()), step), block=False
-            )
-            time.sleep(self.settings.x_stats_sampling_interval)
 
     def _worker_publish(self, e, h, q, b, stop, name=None):
         while not q.empty() or not stop():

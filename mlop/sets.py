@@ -16,8 +16,9 @@ class Settings:
     project: str = "default"
     mode: str = "perf"  # noop | debug | perf
     system: dict[str, any] = {}
+    meta: list = []
     message: queue.Queue = queue.Queue()
-    disable_store: bool = False
+    disable_store: bool = True  # TODO: make false
     disable_iface: bool = False
 
     _op_name: str = None
@@ -41,8 +42,9 @@ class Settings:
     x_file_stream_max_conn: int = 2**5
     x_file_stream_max_size: int = 2**18
     x_file_stream_transmit_interval: int = 2**3
-    x_stats_sampling_interval: int = 2**2
-    x_stats_reporting_prefix: str = "_sys/"
+    x_sys_sampling_interval: int = 2**2
+    x_sys_label: str = "_/sys/"
+    x_meta_label: str = "_/meta/"
 
     url: str = "http://localhost:3000"
     url_data: str = f"{url}/ingest/metrics"

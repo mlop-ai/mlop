@@ -170,7 +170,7 @@ class System:
         return d
 
     def monitor(self):
-        p = self.settings.x_stats_reporting_prefix
+        p = self.settings.x_sys_label
         d = {
             **{f"{p}cpu/pct/{i}": v for i, v in enumerate(psutil.cpu_percent(percpu=True))},
             **{f"{p}mem/{k}": v for k, v in psutil.virtual_memory()._asdict().items() if k in ("active", "used")},

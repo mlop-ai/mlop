@@ -21,17 +21,40 @@ class OpsMonitor:
         self.op = op
         self._stop_event = threading.Event()
         self._thread = None
+        self._thread_monitor = None
 
     def start(self) -> None:
         if self._thread is None:
-            self._thread = threading.Thread(target=self.op._worker, daemon=True)
+            self._thread = threading.Thread(
+                target=self.op._worker, 
+                args=(self._stop_event.is_set,),
+                daemon=True
+            )
             self._thread.start()
+        if self._thread_monitor is None:
+            self._thread_monitor = threading.Thread(
+                target=self._worker_monitor,
+                args=(self._stop_event.is_set,),
+                daemon=True,
+            )
+            self._thread_monitor.start()
 
     def stop(self) -> None:
         self._stop_event.set()
-        if self._thread is not None:
-            self._thread.join()  # timeout=self.op.settings.x_stats_sampling_interval
-            self._thread = None
+        for t in [self._thread, self._thread_monitor]:
+            if t is not None:
+                t.join()  # timeout=self.op.settings.x_sys_sampling_interval
+                t = None
+
+    def _worker_monitor(self, stop):
+        while not stop():
+            self.op._iface.publish(
+                data=self.op.settings.system.monitor(),
+                file=None,
+                timestamp=int(time.time()),
+                step=self.op._step,
+            ) if self.op._iface else None
+            time.sleep(self.op.settings.x_sys_sampling_interval)
 
 
 class Ops:
@@ -51,8 +74,8 @@ class Ops:
         atexit.register(self.finish)
 
     def start(self) -> None:
-        self._monitor.start()
         self._iface.start() if self._iface else None
+        self._monitor.start()
         logger.info(f"{TAG}: started")
 
     def log(
@@ -73,12 +96,12 @@ class Ops:
         self._iface.stop() if self._iface else None  # fixed order
         logger.info(f"{TAG}: finished")
 
-    def _worker(self) -> None:
-        while not self._monitor._stop_event.is_set() or not self._queue.empty():
+    def _worker(self, stop) -> None:
+        while not stop() or not self._queue.empty():
             try:
                 self._log(*self._queue.get(block=False))
             except queue.Empty:
-                continue # TODO: reduce resource usage with debounce
+                continue  # TODO: reduce resource usage with debounce
             except Exception as e:
                 logger.critical("%s: failed: %s", TAG, e)
                 raise e
@@ -105,7 +128,10 @@ class Ops:
         # data = data.copy()  # TODO: check mutability
         d, f = {}, {}
         for k, v in data.items():
-            logger.debug(f"{TAG}: added {k} at step {self._step}")
+            if k not in self.settings.meta:
+                self.settings.meta.append(k)
+                d[f"{self.settings.x_meta_label}{k}"] = 0
+                logger.debug(f"{TAG}: added {k} at step {self._step}")
             if isinstance(v, list):
                 for e in v:
                     d, f = self._op(d, f, k, e)
@@ -125,7 +151,7 @@ class Ops:
             if isinstance(v, Image):
                 v.load(self.settings.work_dir())
             # TODO: add step to serialise data for files
-            v._mkcopy(self.settings.work_dir()) # key independent
+            v._mkcopy(self.settings.work_dir())  # key independent
             # d[k] = int(v._id, 16)
             if k not in f:
                 f[k] = [v]
