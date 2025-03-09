@@ -11,8 +11,7 @@ class Settings:
     tag: str = f"{__name__.split('.')[0]}"
     dir: str = str(os.path.abspath(os.getcwd()))
 
-    auth: str = "test"
-    user: str = "test"
+    auth: str = None
     project: str = "default"
     mode: str = "perf"  # noop | debug | perf
     system: dict[str, any] = {}
@@ -20,6 +19,7 @@ class Settings:
     message: queue.Queue = queue.Queue()
     disable_store: bool = True  # TODO: make false
     disable_iface: bool = False
+    disable_logger: bool = False  # disable file-based logging
 
     _op_name: str = None
     _op_id: str = None
@@ -35,7 +35,7 @@ class Settings:
 
     x_log_level: int = 2**4  # logging.NOTSET
     x_internal_check_process: int = None  # 1
-    x_file_stream_retry_max: int = 4
+    x_file_stream_retry_max: int = 2**2
     x_file_stream_retry_wait_min_seconds: float = 2 ** (-1)
     x_file_stream_retry_wait_max_seconds: float = 2
     x_file_stream_timeout_seconds: int = 2**2
@@ -47,8 +47,9 @@ class Settings:
     x_meta_label: str = "_/meta/"
 
     url: str = "https://demo.mlop.ai"
-    url_auth: str = f"{url}/api-keys"
+    url_token: str = f"{url}/api-keys"
     _url_api: str = "https://api.mlop.ai"
+    url_login: str = f"{_url_api}/api/is-logged-in"
     url_status: str = f"{_url_api}/api/create-run"
     url_meta: str = f"{_url_api}/api/add-logname"
     _url: str = "https://server.mlop.ai"

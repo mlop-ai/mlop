@@ -26,9 +26,7 @@ class OpsMonitor:
     def start(self) -> None:
         if self._thread is None:
             self._thread = threading.Thread(
-                target=self.op._worker, 
-                args=(self._stop_event.is_set,),
-                daemon=True
+                target=self.op._worker, args=(self._stop_event.is_set,), daemon=True
             )
             self._thread.start()
         if self._thread_monitor is None:

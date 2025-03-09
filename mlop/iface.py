@@ -1,16 +1,21 @@
-import getpass
-import json
 import logging
 import queue
 import threading
 import time
-import webbrowser
 
 import httpx
 import keyring
 
+from .api import (
+    make_compat_data_v1,
+    make_compat_file_v1,
+    make_compat_meta_v1,
+    make_compat_status_v1,
+    make_compat_storage_v1,
+)
+from .auth import login
 from .sets import Settings
-from .util import ANSI, print_url
+from .util import print_url
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Interface"
@@ -18,14 +23,17 @@ tag = "Interface"
 
 class ServerInterface:
     def __init__(self, settings: Settings) -> None:
+        login(settings=settings)
         self.settings = settings
-        self.settings.auth = keyring.get_password(f"{self.settings.tag}", f"{self.settings.tag}")
+        self.settings.auth = keyring.get_password(
+            f"{self.settings.tag}", f"{self.settings.tag}"
+        )
 
         # self.url_view = f"{self.settings.url_view}/{self.settings.user}/{self.settings.project}/{self.settings._op_id}"
         self.headers = {
             "Authorization": f"Bearer {self.settings.auth}",
             "Content-Type": "application/json",
-            "User-Agent": f"{__name__.split('.')[0]}",
+            "User-Agent": f"{self.settings.tag}",
             "X-Run-Id": f"{self.settings._op_id}",
             "X-Run-Name": f"{self.settings._op_name}",
             "X-Project-Name": f"{self.settings.project}",
@@ -35,7 +43,7 @@ class ServerInterface:
 
         self.client = httpx.Client(
             # http2=True,
-            verify=False,  # TODO: enable ssl
+            verify=True,
             proxy=self.settings.http_proxy or self.settings.https_proxy or None,
             limits=httpx.Limits(
                 max_keepalive_connections=self.settings.x_file_stream_max_conn,
@@ -49,7 +57,7 @@ class ServerInterface:
 
         self.client_storage = httpx.Client(
             # http1=False, # TODO: set http2
-            verify=False,  # TODO: enable ssl
+            verify=True,
             proxy=self.settings.http_proxy or self.settings.https_proxy or None,
         )
 
@@ -66,7 +74,18 @@ class ServerInterface:
         self._thread_message = None
 
     def start(self) -> None:
-        self.auth()
+        r = self._post_v1(
+            self.settings.url_status,
+            self.headers,
+            make_compat_status_v1(self.settings.system.info(), self.settings),
+            client=self.client,
+        )
+        logger.info(
+            f"{tag}: started run {r.json()['runId']}"
+        )  # TODO: send a proper response
+        self.settings.url_view = r.json()["url"]
+        logger.info(f"{tag}: find live updates at {print_url(self.settings.url_view)}")
+
         if self._thread_data is None:
             self._thread_data = threading.Thread(
                 target=self._worker_publish,
@@ -95,33 +114,6 @@ class ServerInterface:
                 daemon=True,
             )
             self._thread_message.start()
-    
-    def auth(self) -> None:
-        r = self._post_v1(
-            self.settings.url_status,
-            self.headers,
-            make_compat_status_v1(self.settings.system.info(), self.settings),
-            client=self.client,
-        )
-        try:
-            logger.info(f"{tag}: started run (ID: {r.json()['runId']})") # TODO: send a proper response
-            self.settings.url_view = r.json()["url"]
-            logger.info(f"{tag}: find live updates at {print_url(self.settings.url_view)}")
-        except Exception as e:
-            # logger.critical("%s: authentication failed: %s", tag, e)
-            hint1 = "Please copy the API key provided in the web portal and paste it below"
-            hint2 = f"You can alternatively manually open {print_url(self.settings.url_auth)}"
-            hint3 = "You may exit at any time by pressing CTRL+C / ⌃+C"
-            logger.info(f"{tag}: initiating authentication\n\n{ANSI.yellow} - {hint1}\n\n - {hint2}\n\n - {hint3}\n")
-            webbrowser.open(url=self.settings.url_auth)
-            self.settings.auth = getpass.getpass(prompt=f"{ANSI.green}API Key: {ANSI.reset}")
-            for h in (self.headers, self.headers_data):
-                h["Authorization"] = f"Bearer {self.settings.auth}"
-            self.auth()
-        try:
-            keyring.set_password(f"{self.settings.tag}", f"{self.settings.tag}", f"{self.settings.auth}")
-        except Exception as e:
-            logger.critical("%s: failed to save api key to system keyring service: %s", tag, e)
 
     def publish(
         self,
@@ -154,7 +146,7 @@ class ServerInterface:
             if t is not None:
                 t.join(timeout=self.settings.x_internal_check_process)
                 t = None
-    
+
     def _update_meta(self, meta):
         r = self._post_v1(
             self.settings.url_meta,
@@ -194,7 +186,7 @@ class ServerInterface:
         )
         try:
             d = r.json()
-            logger.info(f"{tag}: file api responded {len(d)} key(s)")
+            logger.debug(f"{tag}: file api responded {len(d)} key(s)")
             for k, fel in file.items():
                 for f in fel:
                     f._url = make_compat_storage_v1(f, d[k])
@@ -256,7 +248,7 @@ class ServerInterface:
             )
             if r.status_code in [200, 201]:
                 if name is not None and isinstance(q, queue.Queue):
-                    logger.info(
+                    logger.debug(
                         f"{tag}: {name}: sent {len(b)} line(s) at {len(b) / (time.time() - s):.2f} lines/s"
                     )
                 return r
@@ -290,76 +282,3 @@ class ServerInterface:
                     f"{tag}: {name}: failed to send {len(b)} line(s) after {retry} retries"
                 )
             return None
-
-
-def make_compat_status_v1(data, settings):
-    return json.dumps(
-        {
-            "runId": settings._op_id,
-            "runName": settings._op_name,
-            "projectName": settings.project,
-            "metadata": json.dumps(data),
-        }
-    ).encode()
-
-
-def make_compat_meta_v1(meta, settings):
-    return json.dumps(
-        {
-            "runId": settings._op_id,
-            # "runName": settings._op_name,
-            # "projectName": settings.project,
-            "logName": meta # TODO: better aggregate
-        }
-    ).encode()
-
-
-def make_compat_data_v1(data, timestamp, step):
-    line = [
-        json.dumps(
-            {
-                "time": int(timestamp * 1000),  # convert to ms
-                "step": int(step),
-                "data": data,
-            }
-        )
-    ]
-    return ("\n".join(line) + "\n").encode("utf-8")
-
-
-def make_compat_file_v1(file, timestamp, step):
-    batch = []
-    for k, fl in file.items():
-        for f in fl:
-            i = {
-                "fileName": f"{f._name}{f._ext}",
-                "size": f._size,
-                "fileType": f._ext[1:],
-                "logName": k,
-                "step": step,
-            }
-            batch.append(i)
-    return json.dumps({"files": batch}).encode()
-
-
-def make_compat_storage_v1(f, fl):
-    # workaround for lack of file ident on server side
-    for i in fl:
-        if next(iter(i.keys())) == f"{f._name}{f._ext}":
-            return next(iter(i.values()))
-    return None
-
-
-def make_compat_message_v1(level, message, timestamp, step):
-    line = [
-        json.dumps(
-            {
-                "time": int(timestamp * 1000),  # convert to ms
-                "message": message,
-                "lineNumber": step,
-                "logType": "INFO" if level == logging.INFO else "ERROR",
-            }
-        )
-    ]
-    return ("\n".join(line) + "\n").encode("utf-8")
-

@@ -1,10 +1,8 @@
-from .file import File
-from .file import Image
-from .sets import Settings
-from .sys import System
-
+from .auth import login, logout
+from .file import File, Image
 from .init import init
-from .sets import setup
+from .sets import Settings, setup
+from .sys import System
 
 __all__ = (
     "File",
@@ -12,6 +10,8 @@ __all__ = (
     "System",
     "Settings",
     "init",
+    "login",
+    "logout",
     "setup",
 )
 

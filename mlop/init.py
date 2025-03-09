@@ -1,11 +1,9 @@
-import builtins
 import logging
 import os
-import sys
 from datetime import datetime
 
 from . import sets
-from .log import ColorFormatter, ConsoleHandler, input_hook
+from .log import setup_logger
 from .ops import Ops
 from .sets import Settings
 from .sys import System
@@ -38,54 +36,10 @@ class OpsInit:
             self.settings.disable_store = True
         else:
             os.makedirs(f"{setup_settings.work_dir()}/files", exist_ok=True)
-            self._logger_setup()
+            setup_logger(self.settings)
 
-    def _logger_setup(self) -> None:
-        global logger
-        logger.setLevel(self.settings.x_log_level)
-
-        file_handler = logging.FileHandler(
-            f"{self.settings.work_dir()}/{self.settings.tag}.log"
-        )
-        file_formatter = logging.Formatter(
-            "%(asctime)s %(levelname)-8s %(threadName)-10s:%(process)d "
-            "[%(filename)s:%(funcName)s():%(lineno)s] %(message)s"
-        )
-        file_handler.setFormatter(file_formatter)
-        logger.addHandler(file_handler)
-
-        stream_handler = logging.StreamHandler()
-        if self.settings.x_log_level <= logging.DEBUG:
-            stream_formatter = ColorFormatter(
-                "%(asctime)s.%(msecs)03d %(levelname)-8s %(threadName)-10s:%(process)d "
-                "[%(filename)s:%(funcName)s():%(lineno)s] %(message)s",
-                datefmt="%H:%M:%S",
-            )
-        else:
-            stream_formatter = ColorFormatter(
-                "%(asctime)s | %(levelname)-8s | %(message)s",
-                datefmt="%H:%M:%S",
-            )
-        stream_handler.setFormatter(stream_formatter)
-        logger.addHandler(stream_handler)
-
-        console = logging.getLogger("console")
-        console.setLevel(logging.DEBUG)
-        file_handler = logging.FileHandler(f"{self.settings.work_dir()}/sys.log")
-        file_formatter = logging.Formatter(
-            "%(asctime)s.%(msecs)03d | %(levelname)-7s | %(message)s",
-            datefmt="%H:%M:%S",
-        )
-        file_handler.setFormatter(file_formatter)
-        console.addHandler(file_handler)  # TODO: fix slow file writes
-        sys.stdout = ConsoleHandler(console, self.settings.message, logging.INFO, sys.stdout, "stdout")
-        sys.stderr = ConsoleHandler(console, self.settings.message, logging.ERROR, sys.stderr, "stderr")
-
-        if self.settings.mode == "debug":
-            builtins.input = lambda prompt="": input_hook(prompt, logger=console)
-        
-        self.settings.system = System(self.settings)
-        to_json([self.settings.system.info()], f"{self.settings.work_dir()}/sys.json")
+            self.settings.system = System(self.settings)
+            to_json([self.settings.system.info()], f"{settings.work_dir()}/sys.json")
 
 
 def init(

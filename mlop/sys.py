@@ -172,18 +172,41 @@ class System:
     def monitor(self):
         p = self.settings.x_sys_label
         d = {
-            **{f"{p}cpu/pct/{i}": v for i, v in enumerate(psutil.cpu_percent(percpu=True))},
-            **{f"{p}mem/{k}": v for k, v in psutil.virtual_memory()._asdict().items() if k in ("active", "used")},
-            **{f"{p}disk/{k}": v for k, v in psutil.disk_usage(self.settings.work_dir())._asdict().items()},
-            **{f"{p}net/{k}": v for k, v in psutil.net_io_counters()._asdict().items() if k.startswith("bytes")},
+            **{
+                f"{p}cpu/pct/{i}": v
+                for i, v in enumerate(psutil.cpu_percent(percpu=True))
+            },
+            **{
+                f"{p}mem/{k}": v
+                for k, v in psutil.virtual_memory()._asdict().items()
+                if k in ("active", "used")
+            },
+            **{
+                f"{p}disk/{k}": v
+                for k, v in psutil.disk_usage(self.settings.work_dir())
+                ._asdict()
+                .items()
+            },
+            **{
+                f"{p}net/{k}": v
+                for k, v in psutil.net_io_counters()._asdict().items()
+                if k.startswith("bytes")
+            },
         }
         if self.gpu:
             if self.gpu.get("nvidia"):
                 import pynvml
+
                 for h in self.gpu["nvidia"]["handles"]:
-                    dev = str(pynvml.nvmlDeviceGetName(h))[2:-1].lower().replace(" ", "_")
-                    d[f"{p}gpu/nvda/{dev}/pct"] = pynvml.nvmlDeviceGetUtilizationRates(h).gpu
-                    d[f"{p}gpu/nvda/{dev}/mem/pct"] = pynvml.nvmlDeviceGetUtilizationRates(h).memory
+                    dev = (
+                        str(pynvml.nvmlDeviceGetName(h))[2:-1].lower().replace(" ", "_")
+                    )
+                    d[f"{p}gpu/nvda/{dev}/pct"] = pynvml.nvmlDeviceGetUtilizationRates(
+                        h
+                    ).gpu
+                    d[f"{p}gpu/nvda/{dev}/mem/pct"] = (
+                        pynvml.nvmlDeviceGetUtilizationRates(h).memory
+                    )
                     d[f"{p}gpu/nvda/{dev}/power"] = pynvml.nvmlDeviceGetPowerUsage(h)
         return d
 

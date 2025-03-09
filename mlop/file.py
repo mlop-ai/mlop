@@ -110,8 +110,8 @@ class Image(File):
 
 def make_compat_matplotlib(val: any) -> any:
     # from matplotlib.spines import Spine # only required for is_frame_like workaround
-    from matplotlib.figure import Figure
     import matplotlib.pyplot as plt
+    from matplotlib.figure import Figure
 
     if val == plt:
         val = val.gcf()

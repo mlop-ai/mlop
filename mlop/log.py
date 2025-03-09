@@ -3,10 +3,11 @@ import logging
 import sys
 import time
 
-from .iface import make_compat_message_v1
+from .api import make_compat_message_v1
 from .util import ANSI
 
 builtins_input = builtins.input
+logger = logging.getLogger(f"{__name__.split('.')[0]}")
 
 
 class ColorFormatter(logging.Formatter):
@@ -61,7 +62,64 @@ class ConsoleHandler:
         return getattr(self.stream, attr)
 
 
+def stream_formatter(settings):
+    if settings.x_log_level <= logging.DEBUG:
+        return ColorFormatter(
+            "%(asctime)s.%(msecs)03d %(levelname)-8s %(threadName)-10s:%(process)d "
+            "[%(filename)s:%(funcName)s():%(lineno)s] %(message)s",
+            datefmt="%H:%M:%S",
+        )
+    else:
+        return ColorFormatter(
+            "%(asctime)s | %(levelname)-8s | %(message)s",
+            datefmt="%H:%M:%S",
+        )
+
+
 def input_hook(prompt="", logger=None):
     content = builtins_input(prompt)
     logger.warn(f"{prompt}{content}")
     return content
+
+
+def setup_logger(settings) -> None:
+    global logger
+    if len(logger.handlers) != 0:
+        return
+    logger.setLevel(settings.x_log_level)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(stream_formatter(settings))
+    logger.addHandler(stream_handler)
+
+    if not settings.disable_logger:
+        setup_logger_file(settings)
+
+
+def setup_logger_file(settings) -> None:
+    file_handler = logging.FileHandler(f"{settings.work_dir()}/{settings.tag}.log")
+    file_formatter = logging.Formatter(
+        "%(asctime)s %(levelname)-8s %(threadName)-10s:%(process)d "
+        "[%(filename)s:%(funcName)s():%(lineno)s] %(message)s"
+    )
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
+
+    console = logging.getLogger("console")
+    console.setLevel(logging.DEBUG)
+    file_handler = logging.FileHandler(f"{settings.work_dir()}/sys.log")
+    file_formatter = logging.Formatter(
+        "%(asctime)s.%(msecs)03d | %(levelname)-7s | %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    file_handler.setFormatter(file_formatter)
+    console.addHandler(file_handler)  # TODO: fix slow file writes
+    sys.stdout = ConsoleHandler(
+        console, settings.message, logging.INFO, sys.stdout, "stdout"
+    )
+    sys.stderr = ConsoleHandler(
+        console, settings.message, logging.ERROR, sys.stderr, "stderr"
+    )
+
+    if settings.mode == "debug":
+        builtins.input = lambda prompt="": input_hook(prompt, logger=console)

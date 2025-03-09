@@ -1,8 +1,8 @@
 import logging
 import queue
 import sqlite3
-import time
 import threading
+import time
 
 from .sets import Settings
 
