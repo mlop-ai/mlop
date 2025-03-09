@@ -2,13 +2,14 @@ import json
 import logging
 
 
-def make_compat_start_v1(data, settings):
+def make_compat_start_v1(config, settings, info):
     return json.dumps(
         {
             "runId": settings._op_id,
             "runName": settings._op_name,
             "projectName": settings.project,
-            "metadata": json.dumps(data),
+            "metadata": json.dumps(config),
+            "systemMetadata": json.dumps(info),
         }
     ).encode()
 

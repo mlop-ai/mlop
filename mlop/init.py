@@ -14,9 +14,9 @@ tag = "Init"
 
 
 class OpsInit:
-    def __init__(self) -> None:
+    def __init__(self, config) -> None:
         self.kwargs = None
-        self.config: dict[str, any] = {}
+        self.config: dict[str, any] = config
 
     def init(self) -> Ops:
         op = Ops(config=self.config, settings=self.settings)
@@ -62,7 +62,7 @@ def init(
     settings._op_id = id if id else gen_id()
 
     try:
-        op = OpsInit()
+        op = OpsInit(config=config)
         op.setup(settings=settings)
         return op.init()
     except Exception as e:

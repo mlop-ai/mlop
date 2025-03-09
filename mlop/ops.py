@@ -62,10 +62,10 @@ class Ops:
         self._monitor = OpsMonitor(op=self)
 
         self._store = (
-            DataStore(settings=settings) if not settings.disable_store else None
+            DataStore(config=config, settings=settings) if not settings.disable_store else None
         )
         self._iface = (
-            ServerInterface(settings=settings) if not settings.disable_iface else None
+            ServerInterface(config=config, settings=settings) if not settings.disable_iface else None
         )
         self._step = 0
         self._queue = queue.Queue()

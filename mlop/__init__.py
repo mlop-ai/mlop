@@ -4,6 +4,7 @@ from .init import init
 from .sets import Settings, setup
 from .sys import System
 
+# TODO: setup preinit
 __all__ = (
     "File",
     "Image",

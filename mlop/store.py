@@ -11,7 +11,7 @@ tag = "Store"
 
 
 class DataStore:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, config: dict, settings: Settings) -> None:
         self.settings = settings
 
         self.db = f"{settings.work_dir()}/{settings.store_db}"

@@ -23,8 +23,9 @@ tag = "Interface"
 
 
 class ServerInterface:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, config: dict, settings: Settings) -> None:
         login(settings=settings)
+        self.config = config
         self.settings = settings
         self.settings.auth = keyring.get_password(
             f"{self.settings.tag}", f"{self.settings.tag}"
@@ -78,7 +79,7 @@ class ServerInterface:
         r = self._post_v1(
             self.settings.url_start,
             self.headers,
-            make_compat_start_v1(self.settings.system.info(), self.settings),
+            make_compat_start_v1(self.config, self.settings, self.settings.system.info()),
             client=self.client,
         )
         logger.info(
