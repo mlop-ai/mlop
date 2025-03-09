@@ -10,7 +10,8 @@ from .api import (
     make_compat_data_v1,
     make_compat_file_v1,
     make_compat_meta_v1,
-    make_compat_status_v1,
+    make_compat_start_v1,
+    make_compat_stop_v1,
     make_compat_storage_v1,
 )
 from .auth import login
@@ -75,9 +76,9 @@ class ServerInterface:
 
     def start(self) -> None:
         r = self._post_v1(
-            self.settings.url_status,
+            self.settings.url_start,
             self.headers,
-            make_compat_status_v1(self.settings.system.info(), self.settings),
+            make_compat_start_v1(self.settings.system.info(), self.settings),
             client=self.client,
         )
         logger.info(
@@ -135,7 +136,6 @@ class ServerInterface:
             self._thread_file.start()
 
     def stop(self) -> None:
-        logger.info(f"{tag}: find uploaded data at {print_url(self.settings.url_view)}")
         self._stop_event.set()
         for t in [
             self._thread_data,
@@ -146,6 +146,13 @@ class ServerInterface:
             if t is not None:
                 t.join(timeout=self.settings.x_internal_check_process)
                 t = None
+        r = self._post_v1(
+            self.settings.url_stop,
+            self.headers,
+            make_compat_stop_v1("COMPLETED", self.settings),
+            client=self.client,
+        )
+        logger.info(f"{tag}: find uploaded data at {print_url(self.settings.url_view)}")
 
     def _update_meta(self, meta):
         r = self._post_v1(
