@@ -186,6 +186,7 @@ class System:
                 for k, v in psutil.disk_usage(self.settings.work_dir())
                 ._asdict()
                 .items()
+                if k in ("used")
             },
             **{
                 f"{p}net/{k}": v

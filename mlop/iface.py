@@ -87,6 +87,7 @@ class ServerInterface:
         )  # TODO: send a proper response
         self.settings.url_view = r.json()["url"]
         logger.info(f"{tag}: find live updates at {print_url(self.settings.url_view)}")
+        self._update_meta(list(self.settings.system.monitor().keys()))
 
         if self._thread_data is None:
             self._thread_data = threading.Thread(
