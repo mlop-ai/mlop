@@ -145,7 +145,7 @@ class ServerInterface:
             self._thread_message,
         ]:
             if t is not None:
-                t.join(timeout=self.settings.x_internal_check_process)
+                t.join(timeout=None)
                 t = None
         r = self._post_v1(
             self.settings.url_stop,
@@ -164,8 +164,10 @@ class ServerInterface:
         )
 
     def _worker_publish(self, e, h, q, b, stop, name=None):
-        while not q.empty() or not stop():
-            if not q.empty():
+        while not (q.empty() and stop()):  # terminates only when both conditions met
+            if q.empty():
+                time.sleep(self.settings.x_internal_check_process) # debounce
+            else:
                 _ = self._post_v1(
                     e,
                     h,
@@ -215,7 +217,7 @@ class ServerInterface:
             and (time.time() - s) < self.settings.x_file_stream_transmit_interval
         ):
             try:
-                v = q.get(block=False)
+                v = q.get(timeout=self.settings.x_internal_check_process)
                 b.append(v)
                 yield v
             except queue.Empty:

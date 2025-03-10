@@ -97,10 +97,12 @@ class Ops:
     def _worker(self, stop) -> None:
         while not stop() or not self._queue.empty():
             try:
-                self._log(*self._queue.get(block=False))
+                # if queue seems empty, wait for x_internal_check_process before it considers it empty to save compute
+                self._log(*self._queue.get(block=True, timeout=self.settings.x_internal_check_process))  # debounce
             except queue.Empty:
                 continue  # TODO: reduce resource usage with debounce
             except Exception as e:
+                time.sleep(self.settings.x_internal_check_process)  # debounce
                 logger.critical("%s: failed: %s", TAG, e)
                 raise e
 
