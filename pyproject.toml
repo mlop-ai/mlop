@@ -4,5 +4,5 @@ authors = [
     {name = "jqssun", email = "jqssun+git@googlemail.com"},
     {name = "lakeesiv", email = "lakeesivaraya@gmail.com"},
 ]
-version = "0.0"
+version = "0.0.0"
 description = "mlop"
