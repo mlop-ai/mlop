@@ -1,0 +1,36 @@
+---
+sidebar_position: 6
+---
+
+# Logging
+
+## Admonitions
+
+:::tip Tip
+an example
+:::
+
+:::danger Caution
+an example
+:::
+
+## React
+
+export const Highlight = ({children, color}) => (
+  <span
+    style={{
+      backgroundColor: color,
+      borderRadius: '20px',
+      color: '#fff',
+      padding: '10px',
+      cursor: 'pointer',
+    }}
+    onClick={() => {
+      alert(`You clicked the color ${color} with label ${children}`);
+    }}>
+    {children}
+  </span>
+);
+
+<Highlight color="#25c2a0">Green</Highlight>
+<Highlight color="#1877F2">Blue</Highlight>
