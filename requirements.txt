@@ -1,5 +1,6 @@
 GitPython
 httpx[http2]
 keyring
+keyrings.alt # make optional
 pillow
 psutil

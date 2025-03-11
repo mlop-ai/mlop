@@ -16,4 +16,4 @@ __all__ = (
     "setup",
 )
 
-__version__ = "0.0d"
+__version__ = "0.0.0"

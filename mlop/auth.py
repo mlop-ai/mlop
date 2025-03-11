@@ -5,6 +5,7 @@ import webbrowser
 
 import httpx
 import keyring
+from keyrings.alt.file import PlaintextKeyring
 
 from .log import setup_logger
 from .sets import Settings, get_console
@@ -15,6 +16,8 @@ tag = "Auth"
 
 
 def login(settings=Settings(), retry=False):
+    if settings._nb_colab() is True:  # TODO: find more secure implementations for colab
+        keyring.set_keyring(PlaintextKeyring())
     settings.disable_logger = True
     setup_logger(settings)
     if settings.auth is None:
@@ -65,6 +68,8 @@ def login(settings=Settings(), retry=False):
 
 
 def logout(settings=Settings()):
+    if settings._nb_colab() is True:
+        keyring.set_keyring(PlaintextKeyring())
     settings.disable_logger = True
     setup_logger(settings)
     try:

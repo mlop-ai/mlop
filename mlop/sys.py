@@ -129,7 +129,7 @@ class System:
                 "commit": repo.head.commit.hexsha,
             }
         except Exception as e:
-            logger.warning("%s: git: repository is invalid: %s", tag, e)
+            logger.debug("%s: git: repository not detected: %s", tag, e)
         return d
 
     def info(self):
@@ -155,7 +155,11 @@ class System:
             "boot_time": self.boot_time,
         }
         if self.gpu:
-            d["gpu"] = {k: v for k, v in self.gpu.items() if k != "handles"}
+            d["gpu"] = {}
+            if self.gpu.get("nvidia"):
+                d["gpu"]["nvidia"] = {
+                    k: v for k, v in self.gpu["nvidia"].items() if k != "handles"
+                }
         if self.git:
             d["git"] = self.git
         if self.settings.mode == "debug":
