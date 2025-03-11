@@ -1,8 +1,28 @@
 [project]
+version = "0.0.0rc8"
 name = "mlop"
 authors = [
     {name = "jqssun", email = "jqssun+git@googlemail.com"},
     {name = "lakeesiv", email = "lakeesivaraya@gmail.com"},
 ]
-version = "0.0.0rc7"
 description = "mlop"
+readme = "README.md"
+license = {file = "LICENSE"}
+
+dependencies = [
+  "GitPython",
+  "httpx[http2]",
+  "keyring",
+  "pillow",
+  "psutil",
+]
+
+[project.optional-dependencies]
+insecure = [
+  "keyrings.alt",
+]
+
+[project.urls]
+Homepage = "https://github.com/mlop-ai/mlop"
+Documentation = "https://mlop-ai.github.io/docs/"
+Repository = "https://github.com/mlop-ai/mlop.git"
