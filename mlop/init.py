@@ -30,14 +30,17 @@ class OpsInit:
         # TODO: handle login and settings validation here
         setup_settings.update(settings)
         self.settings = setup_settings
-        self.settings.meta = [] # TODO: find a better way to de-reference meta
+        self.settings.meta = []  # TODO: find a better way to de-reference meta
 
         if self.settings.mode == "noop":
             self.settings.disable_iface = True
             self.settings.disable_store = True
         else:
             os.makedirs(f"{setup_settings.work_dir()}/files", exist_ok=True)
-            setup_logger(self.settings)
+            global logger
+            setup_logger(
+                self.settings, logger, console=logging.getLogger("console"), op=True
+            )
 
             self.settings.system = System(self.settings)
             to_json([self.settings.system.info()], f"{settings.work_dir()}/sys.json")

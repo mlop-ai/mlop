@@ -8,6 +8,7 @@ from collections.abc import Mapping
 
 from .file import File, Image
 from .iface import ServerInterface
+from .log import teardown_logger
 from .sets import Settings
 from .store import DataStore
 from .util import dict_to_json
@@ -62,10 +63,14 @@ class Ops:
         self._monitor = OpsMonitor(op=self)
 
         self._store = (
-            DataStore(config=config, settings=settings) if not settings.disable_store else None
+            DataStore(config=config, settings=settings)
+            if not settings.disable_store
+            else None
         )
         self._iface = (
-            ServerInterface(config=config, settings=settings) if not settings.disable_iface else None
+            ServerInterface(config=config, settings=settings)
+            if not settings.disable_iface
+            else None
         )
         self._step = 0
         self._queue = queue.Queue()
@@ -93,14 +98,19 @@ class Ops:
         self._store.stop() if self._store else None
         self._iface.stop() if self._iface else None  # fixed order
         logger.debug(f"{TAG}: finished")
+        teardown_logger(logger, console=logging.getLogger("console"))
 
     def _worker(self, stop) -> None:
         while not stop() or not self._queue.empty():
             try:
                 # if queue seems empty, wait for x_internal_check_process before it considers it empty to save compute
-                self._log(*self._queue.get(block=True, timeout=self.settings.x_internal_check_process))  # debounce
+                self._log(
+                    *self._queue.get(
+                        block=True, timeout=self.settings.x_internal_check_process
+                    )
+                )
             except queue.Empty:
-                continue  # TODO: reduce resource usage with debounce
+                continue
             except Exception as e:
                 time.sleep(self.settings.x_internal_check_process)  # debounce
                 logger.critical("%s: failed: %s", TAG, e)
@@ -162,7 +172,7 @@ class Ops:
         elif isinstance(v, (int, float)):
             d[k] = v
         else:
-            pass # raise not supported error
+            pass  # raise not supported error
         return d, f
 
     def _finish(self, exit_code) -> None:

@@ -24,7 +24,7 @@ tag = "Interface"
 
 class ServerInterface:
     def __init__(self, config: dict, settings: Settings) -> None:
-        login(settings=settings, op=True)
+        login(settings=settings)
         self.config = config
         self.settings = settings
         self.settings.auth = keyring.get_password(

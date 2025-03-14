@@ -83,18 +83,12 @@ def input_hook(prompt="", logger=None):
     return content
 
 
-def setup_logger(settings, op=True) -> None:
+def setup_logger(settings, logger, console=None, op=True) -> None:
     if settings._nb_colab():
         rlogger = logging.getLogger()
-        for h in rlogger.handlers[:]: # iter root handlers
+        for h in rlogger.handlers[:]:  # iter root handlers
             rlogger.removeHandler(h)
-
-    global logger
-    if len(logger.handlers) >= 2: # full logger
-        return
-    elif len(logger.handlers) > 0: # partial setup
-        for h in logger.handlers[:]:
-            logger.removeHandler(h) # reset
+            
     logger.setLevel(settings.x_log_level)
 
     stream_handler = logging.StreamHandler()
@@ -102,40 +96,44 @@ def setup_logger(settings, op=True) -> None:
     logger.addHandler(stream_handler)
 
     if op and not settings.disable_logger:
-        setup_logger_file(settings)
+        if len(console.handlers) > 0:  # full logger
+            return
+        logger, console = setup_logger_file(settings, logger, console)
 
 
-def setup_logger_file(settings) -> None:
-    try:
-        file_handler = logging.FileHandler(f"{settings.work_dir()}/{settings.tag}.log")
-        file_formatter = logging.Formatter(
-            "%(asctime)s %(levelname)-8s %(threadName)-10s:%(process)d "
-            "[%(filename)s:%(funcName)s():%(lineno)s] %(message)s"
-        )
-        file_handler.setFormatter(file_formatter)
-        logger.addHandler(file_handler)
-    except TypeError:
-        pass # TODO: better handle this
+def teardown_logger(logger, console=None):
+    for h in logger.handlers[:]:
+        logger.removeHandler(h)
+    if console:
+        teardown_logger(console)
 
-    console = logging.getLogger("console")
+
+def setup_logger_file(settings, logger, console):
     console.setLevel(logging.DEBUG)
+
+    file_handler = logging.FileHandler(f"{settings.work_dir()}/{settings.tag}.log")
+    file_formatter = logging.Formatter(
+        "%(asctime)s %(levelname)-8s %(threadName)-10s:%(process)d "
+        "[%(filename)s:%(funcName)s():%(lineno)s] %(message)s"
+    )
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
+
+    file_handler = logging.FileHandler(f"{settings.work_dir()}/sys.log")
+    file_formatter = logging.Formatter(
+        "%(asctime)s.%(msecs)03d | %(levelname)-7s | %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    file_handler.setFormatter(file_formatter)
+    console.addHandler(file_handler)  # TODO: fix slow file writes
+
     if settings.mode == "debug":
         builtins.input = lambda prompt="": input_hook(prompt, logger=console)
-    if len(console.handlers) > 0: # full logger
-        return
-    try:
-        file_handler = logging.FileHandler(f"{settings.work_dir()}/sys.log")
-        file_formatter = logging.Formatter(
-            "%(asctime)s.%(msecs)03d | %(levelname)-7s | %(message)s",
-            datefmt="%H:%M:%S",
-        )
-        file_handler.setFormatter(file_formatter)
-        console.addHandler(file_handler)  # TODO: fix slow file writes
-    except TypeError:
-        pass
     sys.stdout = ConsoleHandler(
         console, settings.message, logging.INFO, sys.stdout, "stdout"
     )
     sys.stderr = ConsoleHandler(
         console, settings.message, logging.ERROR, sys.stderr, "stderr"
     )
+
+    return logger, console
