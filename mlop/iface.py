@@ -45,7 +45,7 @@ class ServerInterface:
 
         self.client = httpx.Client(
             # http2=True,
-            verify=True,
+            verify=True if not self.settings.insecure_disable_ssl else False,
             proxy=self.settings.http_proxy or self.settings.https_proxy or None,
             limits=httpx.Limits(
                 max_keepalive_connections=self.settings.x_file_stream_max_conn,
@@ -59,7 +59,7 @@ class ServerInterface:
 
         self.client_storage = httpx.Client(
             # http1=False, # TODO: set http2
-            verify=True,
+            verify=True if not self.settings.insecure_disable_ssl else False,
             proxy=self.settings.http_proxy or self.settings.https_proxy or None,
         )
 

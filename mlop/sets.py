@@ -32,6 +32,7 @@ class Settings:
 
     http_proxy: str = None
     https_proxy: str = None
+    insecure_disable_ssl: bool = False
 
     x_log_level: int = 2**4  # logging.NOTSET
     x_internal_check_process: int = 1  # TODO: make configurable

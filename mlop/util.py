@@ -4,6 +4,7 @@ import os
 import random
 import string
 import time
+import uuid
 from typing import Sequence, Union
 
 from .sets import get_console
@@ -44,7 +45,8 @@ def print_url(url):
     return f"{ANSI.underline}{url}{ANSI.reset}"
 
 
-def gen_id(length=8) -> str:
+def gen_id(seed=None, length=8) -> str:
+    random.seed(uuid.uuid4().hex) if seed is None else random.seed(seed + uuid.uuid4().hex)
     base = string.ascii_lowercase + string.ascii_uppercase + string.digits
     return "".join(random.choice(base) for _ in range(length))
 

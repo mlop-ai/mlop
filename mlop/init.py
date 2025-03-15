@@ -63,7 +63,7 @@ def init(
     settings.project = project if project else settings.project
 
     settings._op_name = name if name else datetime.now().strftime("%Y%m%d")
-    settings._op_id = id if id else gen_id()
+    settings._op_id = id if id else gen_id(seed=settings.project)
 
     try:
         op = OpsInit(config=config)

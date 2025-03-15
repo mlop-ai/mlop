@@ -33,7 +33,10 @@ def login(settings=Settings(), retry=False):
             "%s: authentication failed: the provided token cannot be empty", tag
         )
         settings.auth = "_key"
-    client = httpx.Client(proxy=settings.http_proxy or settings.https_proxy or None)
+    client = httpx.Client(
+        verify=True if not settings.insecure_disable_ssl else False,
+        proxy=settings.http_proxy or settings.https_proxy or None
+    )
     r = client.post(
         url=settings.url_login,
         headers={

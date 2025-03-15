@@ -80,5 +80,6 @@ def read_sets_compat(args, tag):
     if args.proxy == "e" or args.debug == "test":
         d["http_proxy"] = "http://localhost:8888"
         d["https_proxy"] = "http://localhost:8888"
+        d["insecure_disable_ssl"] = True
 
     return mlop, d
