@@ -6,8 +6,11 @@ import time
 from .api import make_compat_message_v1
 from .util import ANSI
 
-builtins_input = builtins.input
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
+
+bak_input = builtins.input
+bak_stdout = sys.stdout
+bak_stderr = sys.stderr
 
 colors = {
     "DEBUG": ANSI.green,
@@ -79,12 +82,12 @@ def stream_formatter(settings):
 
 
 def input_hook(prompt="", logger=None):
-    content = builtins_input(prompt)
+    content = bak_input(prompt)
     logger.warn(f"{prompt}{content}")
     return content
 
 
-def setup_logger(settings, logger, console=None, op=True) -> None:
+def setup_logger(settings, logger, console=None) -> None:
     if settings._nb_colab():
         rlogger = logging.getLogger()
         for h in rlogger.handlers[:]:  # iter root handlers
@@ -92,11 +95,12 @@ def setup_logger(settings, logger, console=None, op=True) -> None:
 
     logger.setLevel(settings.x_log_level)
 
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(stream_formatter(settings))
-    logger.addHandler(stream_handler)
+    if len(logger.handlers) == 0:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(stream_formatter(settings))
+        logger.addHandler(stream_handler)
 
-    if op and not settings.disable_logger:
+    if settings._op_id and not settings.disable_logger:
         if len(console.handlers) > 0:  # full logger
             return
         logger, console = setup_logger_file(settings, logger, console)
@@ -106,7 +110,10 @@ def teardown_logger(logger, console=None):
     for h in logger.handlers[:]:
         logger.removeHandler(h)
     if console:
-        teardown_logger(console)
+        builtins.input = bak_input
+        sys.stdout = bak_stdout  # global bak_stdout
+        sys.stderr = bak_stderr
+        teardown_logger(logger=console)
 
 
 def setup_logger_file(settings, logger, console):

@@ -11,14 +11,13 @@ from .log import setup_logger, teardown_logger
 from .sets import Settings, get_console
 from .util import ANSI, print_url
 
-temp = logging.getLogger("auth")
+tlogger = logging.getLogger("auth")
 tag = "Auth"
 
 
 def login(settings=None, retry=False):
     settings = settings or Settings()
-    # op: differentiate if calling within a run
-    setup_logger(settings, logger=temp, op=False)
+    setup_logger(settings=settings, logger=tlogger)
     try:
         auth = keyring.get_password(f"{settings.tag}", f"{settings.tag}")
     except keyring.errors.NoKeyringError:  # fallback
@@ -30,7 +29,7 @@ def login(settings=None, retry=False):
         elif auth is not None:
             settings.auth = auth
     if settings.auth == "":
-        temp.critical(
+        tlogger.critical(
             "%s: authentication failed: the provided token cannot be empty", tag
         )
         settings.auth = "_key"
@@ -45,16 +44,16 @@ def login(settings=None, retry=False):
         },
     )
     try:
-        temp.info(f"{tag}: logged in as {r.json()['organization']['slug']}")
+        tlogger.info(f"{tag}: logged in as {r.json()['organization']['slug']}")
         keyring.set_password(f"{settings.tag}", f"{settings.tag}", f"{settings.auth}")
-        teardown_logger(temp)
+        teardown_logger(tlogger)
     except Exception as e:
         if retry:
-            temp.warning("%s: authentication failed", tag)
+            tlogger.warning("%s: authentication failed", tag)
         hint1 = f"{ANSI.cyan}- Please copy the API key provided in the web portal and paste it below"
         hint2 = f"- You can alternatively manually open {print_url(settings.url_token)}"
         hint3 = f"{ANSI.green}- You may exit at any time by pressing CTRL+C / ⌃+C"
-        temp.info(
+        tlogger.info(
             f"{tag}: initializing authentication\n\n {hint1}\n\n {hint2}\n\n {hint3}\n"
         )
         webbrowser.open(url=settings.url_token)
@@ -67,22 +66,22 @@ def login(settings=None, retry=False):
                 f"{settings.tag}", f"{settings.tag}", f"{settings.auth}"
             )
         except Exception as e:
-            temp.critical(
+            tlogger.critical(
                 "%s: failed to save key to system keyring service: %s", tag, e
             )
-        teardown_logger(temp)
+        teardown_logger(tlogger)
         login(retry=True)
 
 
 def logout(settings=None):
     settings = settings or Settings()
-    setup_logger(settings, logger=temp, op=False)
+    setup_logger(settings=settings, logger=tlogger)
     try:
         keyring.delete_password(f"{settings.tag}", f"{settings.tag}")
     except keyring.errors.NoKeyringError:
         keyring.set_keyring(PlaintextKeyring())
         keyring.delete_password(f"{settings.tag}", f"{settings.tag}")
     except Exception as e:
-        temp.warning("%s: failed to delete key from system keyring service: %s", tag, e)
-    temp.info(f"{tag}: logged out")
-    teardown_logger(temp)
+        tlogger.warning("%s: failed to delete key from system keyring service: %s", tag, e)
+    tlogger.info(f"{tag}: logged out")
+    teardown_logger(tlogger)

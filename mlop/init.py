@@ -39,7 +39,7 @@ class OpsInit:
             os.makedirs(f"{setup_settings.work_dir()}/files", exist_ok=True)
             global logger
             setup_logger(
-                self.settings, logger, console=logging.getLogger("console"), op=True
+                settings=self.settings, logger=logger, console=logging.getLogger("console")
             )
 
             self.settings.system = System(self.settings)

@@ -24,7 +24,7 @@ tag = "Interface"
 
 class ServerInterface:
     def __init__(self, config: dict, settings: Settings) -> None:
-        login(settings=settings)
+        login()
         self.config = config
         self.settings = settings
         self.settings.auth = keyring.get_password(
@@ -232,7 +232,7 @@ class ServerInterface:
                 headers=headers,
             )
             if r.status_code in [200, 201]:
-                # logger.info(f"{tag}: put a file in storage")
+                logger.debug(f"{tag}: successfully put one item in storage")
                 return r
             else:
                 logger.error(
@@ -244,7 +244,7 @@ class ServerInterface:
         self._put_v1(
             url, headers, content, client=client, retry=retry
         ) if retry < self.settings.x_file_stream_retry_max else logger.critical(
-            f"{tag}: failed to put file in storage after {retry} retries to {url}"
+            f"{tag}: failed to put item in storage after {retry} retries to {url}"
         )
 
     def _post_v1(self, url, headers, q, b=[], client=None, name=None, retry=0):

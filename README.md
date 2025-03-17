@@ -22,7 +22,7 @@ The following clip demonstrates benefits of using **MLOP** (bottom left) over co
 
 Start logging your experiments with **MLOP** in 4 simple steps:
 
-1. Get an account at [demo.mlop.ai](c)
+1. Get an account at [demo.mlop.ai](https://demo.mlop.ai/auth/sign-up)
 2. Install our Python SDK. Within a Python environment, open a Terminal window and paste in the following,
 ```bash
 pip install mlop[dev]
