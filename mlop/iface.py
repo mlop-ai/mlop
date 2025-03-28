@@ -14,7 +14,6 @@ from .api import (
     make_compat_stop_v1,
     make_compat_storage_v1,
 )
-from .auth import login
 from .sets import Settings
 from .util import print_url
 
@@ -24,7 +23,6 @@ tag = "Interface"
 
 class ServerInterface:
     def __init__(self, config: dict, settings: Settings) -> None:
-        login()
         self.config = config
         self.settings = settings
         self.settings.auth = keyring.get_password(
@@ -61,6 +59,7 @@ class ServerInterface:
             # http1=False, # TODO: set http2
             verify=True if not self.settings.insecure_disable_ssl else False,
             proxy=self.settings.http_proxy or self.settings.https_proxy or None,
+            timeout=httpx.Timeout(self.settings.x_file_stream_timeout_seconds),
         )
 
         self._stop_event = threading.Event()
@@ -76,16 +75,6 @@ class ServerInterface:
         self._thread_message = None
 
     def start(self) -> None:
-        r = self._post_v1(
-            self.settings.url_start,
-            self.headers,
-            make_compat_start_v1(self.config, self.settings, self.settings.system.info()),
-            client=self.client,
-        )
-        logger.info(
-            f"{tag}: started run {r.json()['runId']}"
-        )  # TODO: send a proper response
-        self.settings.url_view = r.json()["url"]
         logger.info(f"{tag}: find live updates at {print_url(self.settings.url_view)}")
         self._update_meta(list(self.settings.system.monitor().keys()))
 

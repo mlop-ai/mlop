@@ -22,7 +22,7 @@ class Settings:
     disable_logger: bool = False  # disable file-based logging
 
     _op_name: str = None
-    _op_id: str = None
+    _op_id: int = None
 
     store_db: str = "store.db"
     store_table_data: str = "data"
@@ -71,7 +71,7 @@ class Settings:
 
     def work_dir(self) -> str:
         return os.path.join(
-            self.dir, "." + self.tag, self.project, self._op_name, self._op_id
+            self.dir, "." + self.tag, self.project, self._op_name, str(self._op_id)
         )
 
     def _nb(self) -> bool:

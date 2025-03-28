@@ -1,20 +1,24 @@
 import atexit
 import logging
 import multiprocessing
+import os
 import queue
 import threading
 import time
 from collections.abc import Mapping
 
+from .api import make_compat_start_v1
+from .auth import login
 from .file import File, Image
 from .iface import ServerInterface
-from .log import teardown_logger
+from .log import setup_logger, teardown_logger
 from .sets import Settings
 from .store import DataStore
-from .util import dict_to_json
+from .sys import System
+from .util import dict_to_json, to_json
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
-TAG = "Logging"
+tag = "Logging"
 
 
 class OpsMonitor:
@@ -62,6 +66,30 @@ class Ops:
         self.settings = settings
         self._monitor = OpsMonitor(op=self)
 
+        if self.settings.mode == "noop":
+            self.settings.disable_iface = True
+            self.settings.disable_store = True
+        else:
+            # TODO: set up tmp dir
+            login()
+            self.settings.system = System(self.settings)
+            tmp_iface = ServerInterface(config=config, settings=settings)
+            r = tmp_iface._post_v1(
+                self.settings.url_start, # create-run
+                tmp_iface.headers,
+                make_compat_start_v1(self.config, self.settings, self.settings.system.info()),
+                client=tmp_iface.client,
+            )
+            self.settings.url_view = r.json()["url"]
+            self.settings._op_id = r.json()['runId']
+            logger.info(f"{tag}: started run {str(self.settings._op_id)}")
+
+            os.makedirs(f"{self.settings.work_dir()}/files", exist_ok=True)
+            setup_logger(
+                settings=self.settings, logger=logger, console=logging.getLogger("console")
+            ) # global logger
+            to_json([self.settings.system.info()], f"{self.settings.work_dir()}/sys.json")
+
         self._store = (
             DataStore(config=config, settings=settings)
             if not settings.disable_store
@@ -79,7 +107,7 @@ class Ops:
     def start(self) -> None:
         self._iface.start() if self._iface else None
         self._monitor.start()
-        logger.debug(f"{TAG}: started")
+        logger.debug(f"{tag}: started")
 
     def log(
         self, data: dict[str, any], step: int | None = None, commit: bool | None = None
@@ -97,7 +125,7 @@ class Ops:
             pass
         self._store.stop() if self._store else None
         self._iface.stop() if self._iface else None  # fixed order
-        logger.debug(f"{TAG}: finished")
+        logger.debug(f"{tag}: finished")
         teardown_logger(logger, console=logging.getLogger("console"))
 
     def _worker(self, stop) -> None:
@@ -113,7 +141,7 @@ class Ops:
                 continue
             except Exception as e:
                 time.sleep(self.settings.x_internal_check_process)  # debounce
-                logger.critical("%s: failed: %s", TAG, e)
+                logger.critical("%s: failed: %s", tag, e)
                 raise e
 
     def _log(self, data, step) -> None:
@@ -121,11 +149,11 @@ class Ops:
             e = ValueError(
                 f"Data logged must be of dictionary type; received {type(data).__name__} intsead"
             )
-            logger.critical("%s: failed: %s", TAG, e)
+            logger.critical("%s: failed: %s", tag, e)
             raise e
         if any(not isinstance(k, str) for k in data.keys()):
             e = ValueError("Data logged must have keys of string type")
-            logger.critical("%s: failed: %s", TAG, e)
+            logger.critical("%s: failed: %s", tag, e)
             raise e
 
         t = int(time.time())
@@ -142,7 +170,7 @@ class Ops:
                 m.append(k)
                 self.settings.meta.append(k)
                 # d[f"{self.settings.x_meta_label}{k}"] = 0
-                logger.debug(f"{TAG}: added {k} at step {self._step}")
+                logger.debug(f"{tag}: added {k} at step {self._step}")
             if isinstance(v, list):
                 for e in v:
                     d, f = self._op(d, f, k, e)

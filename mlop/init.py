@@ -3,11 +3,9 @@ import os
 from datetime import datetime
 
 from . import sets
-from .log import setup_logger
 from .ops import Ops
 from .sets import Settings
-from .sys import System
-from .util import gen_id, to_json
+from .util import gen_id
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Init"
@@ -32,19 +30,6 @@ class OpsInit:
         self.settings = setup_settings
         self.settings.meta = []  # TODO: find a better way to de-reference meta
 
-        if self.settings.mode == "noop":
-            self.settings.disable_iface = True
-            self.settings.disable_store = True
-        else:
-            os.makedirs(f"{setup_settings.work_dir()}/files", exist_ok=True)
-            global logger
-            setup_logger(
-                settings=self.settings, logger=logger, console=logging.getLogger("console")
-            )
-
-            self.settings.system = System(self.settings)
-            to_json([self.settings.system.info()], f"{settings.work_dir()}/sys.json")
-
 
 def init(
     dir: str | None = None,
@@ -63,7 +48,7 @@ def init(
     settings.project = project if project else settings.project
 
     settings._op_name = name if name else datetime.now().strftime("%Y%m%d")
-    settings._op_id = id if id else gen_id(seed=settings.project)
+    # settings._op_id = id if id else gen_id(seed=settings.project)
 
     try:
         op = OpsInit(config=config)
