@@ -3,6 +3,7 @@ import logging
 import os
 import platform
 import time
+from typing import TypedDict, List
 
 import psutil
 from git import Repo
@@ -14,6 +15,12 @@ logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "System"
 
 
+class CPUFrequency(TypedDict):
+    freq: List[psutil._common.scpufreq]
+    min: float
+    max: float
+
+
 class System:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -22,9 +29,19 @@ class System:
         self.timezone = list(time.tzname)
 
         self.cpu_count = psutil.cpu_count
-        self.cpu_freq = [i._asdict() for i in psutil.cpu_freq(percpu=True)]
-        self.cpu_freq_min = min([i["min"] for i in self.cpu_freq])
-        self.cpu_freq_max = max([i["max"] for i in self.cpu_freq])
+
+        cpu_freq_info = self.get_cpu_freq()
+
+        self.cpu_freq: List[psutil._common.scpufreq] | None = (
+            cpu_freq_info["freq"] if cpu_freq_info else None
+        )
+        self.cpu_freq_min: float | None = (
+            cpu_freq_info["min"] if cpu_freq_info else None
+        )
+        self.cpu_freq_max: float | None = (
+            cpu_freq_info["max"] if cpu_freq_info else None
+        )
+
         self.svmem = psutil.virtual_memory()._asdict()
         self.sswap = psutil.swap_memory()._asdict()
         self.disk = [i._asdict() for i in psutil.disk_partitions()]
@@ -53,6 +70,18 @@ class System:
 
         self.gpu = self.get_gpu()
         self.git = self.get_git()
+
+    def get_cpu_freq(self) -> CPUFrequency | None:
+        try:
+            cpu_freqs: List[psutil._common.scpufreq] = psutil.cpu_freq(percpu=True)
+
+            min_freq = min(f.min for f in cpu_freqs)
+            max_freq = max(f.max for f in cpu_freqs)
+
+            return {"freq": cpu_freqs, "min": min_freq, "max": max_freq}
+        except Exception:
+            # On macOS or when not available, psutil.cpu_freq will raise an exception
+            return None
 
     def __getattr__(self, name):
         return self.get_psutil(name)
@@ -100,7 +129,9 @@ class System:
                                     p.pid
                                     for p in (
                                         pynvml.nvmlDeviceGetComputeRunningProcesses(h)
-                                        + pynvml.nvmlDeviceGetGraphicsRunningProcesses(h)
+                                        + pynvml.nvmlDeviceGetGraphicsRunningProcesses(
+                                            h
+                                        )
                                     )
                                 ],
                             }
@@ -192,10 +223,8 @@ class System:
             },
             **{
                 f"{p}disk/{k}": v
-                for k, v in psutil.disk_usage(self.settings.get_dir())
-                ._asdict()
-                .items()
-                if k in ("used")
+                for k, v in psutil.disk_usage(self.settings.get_dir())._asdict().items()
+                if k in ("used",)
             },
             **{
                 f"{p}net/{k}": v
@@ -224,7 +253,7 @@ class System:
         d = {
             "cpu": {
                 "percent": psutil.cpu_percent(percpu=True),
-                "freq": [i.current for i in psutil.cpu_freq(percpu=True)],
+                "freq": [f.current for f in self.cpu_freq] if self.cpu_freq else None,
             },
             "memory": {
                 "virt": {
@@ -294,5 +323,4 @@ class System:
                 for k, v in psutil.swap_memory()._asdict().items()
                 if k != "percent"
             }
-        # exit(1)
         return d
