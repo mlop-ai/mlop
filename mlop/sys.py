@@ -137,7 +137,7 @@ class System:
             logger.debug("%s: git: repository not detected: %s", tag, e)
         return d
 
-    def info(self):
+    def get_info(self):
         d = {
             "process": {
                 **self.proc_info,

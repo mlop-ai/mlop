@@ -23,7 +23,7 @@ class Settings:
 
     _op_name: str = None
     _op_id: int = None
-    _op_status: int = 1
+    _op_status: int = -1
 
     store_db: str = "store.db"
     store_table_data: str = "data"

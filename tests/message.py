@@ -3,7 +3,7 @@ import time
 
 from .args import parse, read_sets_compat
 
-TAG = "MESSAGE"
+TAG = "test-message"
 TOTAL = 100
 INIT = time.time()
 
@@ -12,7 +12,7 @@ mlop, settings = read_sets_compat(args, TAG)
 
 
 
-run = mlop.init(dir=".mlop/", project="test", settings=settings)
+run = mlop.init(dir=".mlop/", project=TAG, settings=settings)
 print(f"{TAG}: Init time: {time.time() - INIT:.4f}s")
 
 for i in range(TOTAL):

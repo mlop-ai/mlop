@@ -43,12 +43,16 @@ class OpsMonitor:
             )
             self._thread_monitor.start()
 
-    def stop(self) -> None:
+    def stop(self, code: int | None = None) -> None:
         self._stop_event.set()
         for t in [self._thread, self._thread_monitor]:
             if t is not None:
                 t.join()  # timeout=self.op.settings.x_sys_sampling_interval
                 t = None
+        if isinstance(code, int):
+            self.op.settings._op_status = code
+        elif self.op.settings._op_status == -1:
+            self.op.settings._op_status = 0
 
     def _worker_monitor(self, stop):
         while not stop():
@@ -76,20 +80,26 @@ class Ops:
             self.settings.system = System(self.settings)
             tmp_iface = ServerInterface(config=config, settings=settings)
             r = tmp_iface._post_v1(
-                self.settings.url_start, # create-run
+                self.settings.url_start,  # create-run
                 tmp_iface.headers,
-                make_compat_start_v1(self.config, self.settings, self.settings.system.info()),
+                make_compat_start_v1(
+                    self.config, self.settings, self.settings.system.get_info()
+                ),
                 client=tmp_iface.client,
             )
             self.settings.url_view = r.json()["url"]
-            self.settings._op_id = r.json()['runId']
+            self.settings._op_id = r.json()["runId"]
             logger.info(f"{tag}: started run {str(self.settings._op_id)}")
 
             os.makedirs(f"{self.settings.get_dir()}/files", exist_ok=True)
             setup_logger(
-                settings=self.settings, logger=logger, console=logging.getLogger("stdout")
-            ) # global logger
-            to_json([self.settings.system.info()], f"{self.settings.get_dir()}/sys.json")
+                settings=self.settings,
+                logger=logger,
+                console=logging.getLogger("stdout"),
+            )  # global logger
+            to_json(
+                [self.settings.system.get_info()], f"{self.settings.get_dir()}/sys.json"
+            )
 
         self._store = (
             DataStore(config=config, settings=settings)
@@ -119,18 +129,17 @@ class Ops:
         else:  # bypass queue
             self._log(data=data, step=step)
 
-    def finish(self, exit_code: int | None = None) -> None:
+    def finish(self, code: int | None = None) -> None:
         """Finish logging"""
-        try: 
-            self._finish(exit_code=exit_code)
+        try:
+            self._monitor.stop(code)
             while not self._queue.empty():
                 time.sleep(self.settings.x_internal_check_process)
-            self.settings._op_status = 0
             self._store.stop() if self._store else None
             self._iface.stop() if self._iface else None  # fixed order
         except KeyboardInterrupt as e:
             self.settings._op_status = signal.SIGINT.value
-            self._iface._update_status(self.settings)
+            self._iface._update_status(self.settings) if self._iface else None
             logger.critical("%s: interrupted %s", tag, e)
         logger.debug(f"{tag}: finished")
         teardown_logger(logger, console=logging.getLogger("stdout"))
@@ -209,6 +218,3 @@ class Ops:
         else:
             pass  # raise not supported error
         return d, f
-
-    def _finish(self, exit_code) -> None:
-        self._monitor.stop()

@@ -8,9 +8,9 @@ from .util import ANSI
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 
-bak_input = builtins.input
-bak_stdout = sys.stdout
-bak_stderr = sys.stderr
+_input = builtins.input
+_stdout = sys.stdout
+_stderr = sys.stderr
 
 colors = {
     "DEBUG": ANSI.green,
@@ -82,7 +82,7 @@ def stream_formatter(settings):
 
 
 def input_hook(prompt="", logger=None):
-    content = bak_input(prompt)
+    content = _input(prompt)
     logger.warn(f"{prompt}{content}")
     return content
 
@@ -110,9 +110,9 @@ def teardown_logger(logger, console=None):
     for h in logger.handlers[:]:
         logger.removeHandler(h)
     if console:
-        builtins.input = bak_input
-        sys.stdout = bak_stdout  # global bak_stdout
-        sys.stderr = bak_stderr
+        builtins.input = _input
+        sys.stdout = _stdout  # global _stdout
+        sys.stderr = _stderr
         teardown_logger(logger=console)
 
 

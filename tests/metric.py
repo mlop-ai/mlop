@@ -4,7 +4,7 @@ import time
 
 from .args import parse, read_sets_compat
 
-TAG = "METRIC"
+TAG = "test-metric"
 if platform.system() == "Linux":
     NUM_EPOCHS = 10  # for actions
     ITEM_PER_EPOCH = 10
@@ -22,7 +22,7 @@ mlop, settings = read_sets_compat(args, TAG)
 
 
 
-run = mlop.init(dir=".mlop/", project="test", settings=settings)
+run = mlop.init(dir=".mlop/", project=TAG, settings=settings)
 print(f"{TAG}: Init time: {time.time() - INIT:.4f}s")
 
 BLOCK = time.time()

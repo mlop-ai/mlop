@@ -8,7 +8,7 @@ from torchvision import datasets, transforms
 
 from .args import parse, read_sets_compat
 
-TAG="MNIST"
+TAG="test-cnn-mnist"
 NUM_CORES=0
 NUM_EPOCHS=200 # 5
 CHANNELS=32
@@ -25,7 +25,7 @@ mlop, settings = read_sets_compat(args, TAG)
 
 
 
-run = mlop.init(dir=".mlop/", project="mnist-cnn-test", settings=settings)
+run = mlop.init(dir=".mlop/", project=TAG, settings=settings)
 
 # define the CNN model
 class SimpleCNN(nn.Module):

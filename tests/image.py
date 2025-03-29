@@ -11,7 +11,7 @@ from PIL import Image
 
 from .args import parse, read_sets_compat
 
-TAG = "IMAGE"
+TAG = "test-image"
 ITEM_PER_EPOCH = 10
 WAIT = ITEM_PER_EPOCH * 0.01
 if platform.system() == "Linux":  # or platform.machine() == "x86_64"
@@ -35,7 +35,7 @@ for i in range(TOTAL):
     file = mlop.Image(image)
 print(f"{TAG}: Instantiation time for {i} images: {time.time() - INIT:.4f}s")
 
-run = mlop.init(dir=".mlop/", project="test", settings=settings)
+run = mlop.init(dir=".mlop/", project=TAG, settings=settings)
 # run.log({"test-image": mlop.File(".mlop/image.png")})
 
 for e in range(NUM_EPOCHS):

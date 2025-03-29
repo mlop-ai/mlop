@@ -3,6 +3,7 @@ import logging
 import signal
 
 STATUS = {
+    -1: "RUNNING",
     0: "COMPLETED",
     1: "FAILED",
     signal.SIGINT.value: "TERMINATED",  # "INTERRUPTED",

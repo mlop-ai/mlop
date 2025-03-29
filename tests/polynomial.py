@@ -9,7 +9,7 @@ import torch.optim as optim
 
 from .args import parse, read_sets_compat
 
-TAG = "POLY"
+TAG = "test-polynomial"
 if platform.system() == "Linux" or platform.machine() == "x86_64":
     config = {"epochs": 10_000, "learning_rate": 0.01}  # for actions
 else:
@@ -20,7 +20,7 @@ mlop, settings = read_sets_compat(args, TAG)
 
 
 
-run = mlop.init(dir=".mlop/", project="test", settings=settings,)
+run = mlop.init(dir=".mlop/", project=TAG, settings=settings,)
 
 # generate synthetic data for polynomial regression
 x = torch.linspace(-1, 1, 100).view(-1, 1)
