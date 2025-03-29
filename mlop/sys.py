@@ -250,10 +250,11 @@ class System:
         return d
 
     def monitor_human(self):
+        cpu_freq = self.get_cpu_freq()
         d = {
             "cpu": {
                 "percent": psutil.cpu_percent(percpu=True),
-                "freq": [f.current for f in self.cpu_freq] if self.cpu_freq else None,
+                "freq": [f.current for f in cpu_freq["freq"]] if cpu_freq else None,
             },
             "memory": {
                 "virt": {
