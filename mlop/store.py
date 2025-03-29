@@ -14,7 +14,7 @@ class DataStore:
     def __init__(self, config: dict, settings: Settings) -> None:
         self.settings = settings
 
-        self.db = f"{settings.work_dir()}/{settings.store_db}"
+        self.db = f"{settings.get_dir()}/{settings.store_db}"
 
         self.conn = sqlite3.connect(
             self.db, check_same_thread=False

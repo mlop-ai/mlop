@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import os
 import queue
+import signal
 import threading
 import time
 from collections.abc import Mapping
@@ -84,11 +85,11 @@ class Ops:
             self.settings._op_id = r.json()['runId']
             logger.info(f"{tag}: started run {str(self.settings._op_id)}")
 
-            os.makedirs(f"{self.settings.work_dir()}/files", exist_ok=True)
+            os.makedirs(f"{self.settings.get_dir()}/files", exist_ok=True)
             setup_logger(
-                settings=self.settings, logger=logger, console=logging.getLogger("console")
+                settings=self.settings, logger=logger, console=logging.getLogger("stdout")
             ) # global logger
-            to_json([self.settings.system.info()], f"{self.settings.work_dir()}/sys.json")
+            to_json([self.settings.system.info()], f"{self.settings.get_dir()}/sys.json")
 
         self._store = (
             DataStore(config=config, settings=settings)
@@ -120,13 +121,19 @@ class Ops:
 
     def finish(self, exit_code: int | None = None) -> None:
         """Finish logging"""
-        self._finish(exit_code=exit_code)
-        while not self._queue.empty():
-            pass
-        self._store.stop() if self._store else None
-        self._iface.stop() if self._iface else None  # fixed order
+        try: 
+            self._finish(exit_code=exit_code)
+            while not self._queue.empty():
+                time.sleep(self.settings.x_internal_check_process)
+            self.settings._op_status = 0
+            self._store.stop() if self._store else None
+            self._iface.stop() if self._iface else None  # fixed order
+        except KeyboardInterrupt as e:
+            self.settings._op_status = signal.SIGINT.value
+            self._iface._update_status(self.settings)
+            logger.critical("%s: interrupted %s", tag, e)
         logger.debug(f"{tag}: finished")
-        teardown_logger(logger, console=logging.getLogger("console"))
+        teardown_logger(logger, console=logging.getLogger("stdout"))
 
     def _worker(self, stop) -> None:
         while not stop() or not self._queue.empty():
@@ -189,9 +196,9 @@ class Ops:
     def _op(self, d, f, k, v) -> None:
         if isinstance(v, File):
             if isinstance(v, Image):
-                v.load(self.settings.work_dir())
+                v.load(self.settings.get_dir())
             # TODO: add step to serialise data for files
-            v._mkcopy(self.settings.work_dir())  # key independent
+            v._mkcopy(self.settings.get_dir())  # key independent
             # d[k] = int(v._id, 16)
             if k not in f:
                 f[k] = [v]

@@ -8,7 +8,7 @@ import psutil
 from git import Repo
 
 from .sets import Settings
-from .util import to_human  # TODO: move to server side
+from .util import run_cmd, to_human  # TODO: move to server side
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "System"
@@ -65,54 +65,59 @@ class System:
 
     def get_gpu(self):
         d = {}
-        try:  # NVIDIA
-            import pynvml
 
-            try:
-                pynvml.nvmlInit()
-                logger.info(f"{tag}: NVIDIA GPU detected")
-                d["nvidia"] = {
-                    "count": pynvml.nvmlDeviceGetCount(),
-                    "driver": pynvml.nvmlSystemGetDriverVersion(),
-                    "devices": [],
-                    "handles": [],
-                }
-                for i in range(d["nvidia"]["count"]):
-                    h = pynvml.nvmlDeviceGetHandleByIndex(i)
-                    d["nvidia"]["handles"].append(h)
-                    d["nvidia"]["devices"].append(
-                        {
-                            "name": pynvml.nvmlDeviceGetName(h),
-                            "memory": {
-                                "total": to_human(
-                                    pynvml.nvmlDeviceGetMemoryInfo(h).total
+        n = run_cmd("nvidia-smi")
+        if n:
+            stdout = logging.getLogger("stdout")
+            stdout.info(n)
+            try:  # NVIDIA
+                import pynvml
+
+                try:
+                    pynvml.nvmlInit()
+                    logger.info(f"{tag}: NVIDIA GPU detected")
+                    d["nvidia"] = {
+                        "count": pynvml.nvmlDeviceGetCount(),
+                        "driver": pynvml.nvmlSystemGetDriverVersion(),
+                        "devices": [],
+                        "handles": [],
+                    }
+                    for i in range(d["nvidia"]["count"]):
+                        h = pynvml.nvmlDeviceGetHandleByIndex(i)
+                        d["nvidia"]["handles"].append(h)
+                        d["nvidia"]["devices"].append(
+                            {
+                                "name": pynvml.nvmlDeviceGetName(h),
+                                "memory": {
+                                    "total": to_human(
+                                        pynvml.nvmlDeviceGetMemoryInfo(h).total
+                                    ),
+                                },
+                                "temp": pynvml.nvmlDeviceGetTemperature(
+                                    h, pynvml.NVML_TEMPERATURE_GPU
                                 ),
-                            },
-                            "temp": pynvml.nvmlDeviceGetTemperature(
-                                h, pynvml.NVML_TEMPERATURE_GPU
-                            ),
-                            "pid": [
-                                p.pid
-                                for p in (
-                                    pynvml.nvmlDeviceGetComputeRunningProcesses(h)
-                                    + pynvml.nvmlDeviceGetGraphicsRunningProcesses(h)
-                                )
-                            ],
-                        }
-                    )
-            except pynvml.NVMLError_LibraryNotFound:
-                logger.debug(f"{tag}: NVIDIA: driver not found")
-            except Exception as e:
-                logger.error("%s: NVIDIA: error: %s", tag, e)
-        except ImportError:
-            logger.debug(f"{tag}: NVIDIA: pynvml not found")
+                                "pid": [
+                                    p.pid
+                                    for p in (
+                                        pynvml.nvmlDeviceGetComputeRunningProcesses(h)
+                                        + pynvml.nvmlDeviceGetGraphicsRunningProcesses(h)
+                                    )
+                                ],
+                            }
+                        )
+                except pynvml.NVMLError_LibraryNotFound:
+                    logger.debug(f"{tag}: NVIDIA: driver not found")
+                except Exception as e:
+                    logger.error("%s: NVIDIA: error: %s", tag, e)
+            except ImportError:
+                logger.debug(f"{tag}: NVIDIA: pynvml not found")
         return d
 
     def get_git(self):
         d = {}
         try:
             repo = Repo(
-                f"{self.settings.work_dir()}" or os.getcwd(),
+                f"{self.settings.get_dir()}" or os.getcwd(),
                 search_parent_directories=True,
             )
             try:
@@ -187,7 +192,7 @@ class System:
             },
             **{
                 f"{p}disk/{k}": v
-                for k, v in psutil.disk_usage(self.settings.work_dir())
+                for k, v in psutil.disk_usage(self.settings.get_dir())
                 ._asdict()
                 .items()
                 if k in ("used")
@@ -233,7 +238,7 @@ class System:
                 "in": to_human(psutil.disk_io_counters().write_bytes),
                 "usage": {
                     k: to_human(v)
-                    for k, v in psutil.disk_usage(self.settings.work_dir())
+                    for k, v in psutil.disk_usage(self.settings.get_dir())
                     ._asdict()
                     .items()
                     if k != "percent"

@@ -1,6 +1,12 @@
 import json
 import logging
+import signal
 
+STATUS = {
+    0: "COMPLETED",
+    1: "FAILED",
+    signal.SIGINT.value: "TERMINATED",  # "INTERRUPTED",
+}
 
 def make_compat_start_v1(config, settings, info):
     return json.dumps(
@@ -14,11 +20,11 @@ def make_compat_start_v1(config, settings, info):
     ).encode()
 
 
-def make_compat_stop_v1(data, settings):
+def make_compat_stop_v1(settings):
     return json.dumps(
         {
             "runId": settings._op_id,
-            "status": data,
+            "status": STATUS[settings._op_status],
             "statusMetadata": json.dumps(settings.meta),
         }
     ).encode()

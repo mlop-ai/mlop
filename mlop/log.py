@@ -119,7 +119,7 @@ def teardown_logger(logger, console=None):
 def setup_logger_file(settings, logger, console):
     console.setLevel(logging.DEBUG)
 
-    file_handler = logging.FileHandler(f"{settings.work_dir()}/{settings.tag}.log")
+    file_handler = logging.FileHandler(f"{settings.get_dir()}/{settings.tag}.log")
     file_formatter = logging.Formatter(
         "%(asctime)s %(levelname)-8s %(threadName)-10s:%(process)d "
         "[%(filename)s:%(funcName)s():%(lineno)s] %(message)s"
@@ -127,7 +127,7 @@ def setup_logger_file(settings, logger, console):
     file_handler.setFormatter(file_formatter)
     logger.addHandler(file_handler)
 
-    file_handler = logging.FileHandler(f"{settings.work_dir()}/sys.log")
+    file_handler = logging.FileHandler(f"{settings.get_dir()}/sys.log")
     file_formatter = logging.Formatter(
         "%(asctime)s.%(msecs)03d | %(levelname)-7s | %(message)s",
         datefmt="%H:%M:%S",

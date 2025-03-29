@@ -2,7 +2,9 @@ import json
 import logging
 import os
 import random
+import shutil
 import string
+import subprocess
 import time
 import uuid
 from typing import Sequence, Union
@@ -45,8 +47,26 @@ def print_url(url):
     return f"{ANSI.underline}{url}{ANSI.reset}"
 
 
+def run_cmd(cmd="ls"):
+    if not shutil.which(cmd.split()[0]):
+        return None
+
+    try:
+        r = subprocess.run(cmd.split(), check=False, capture_output=True, text=True)
+        if r.returncode == 0:
+            return r.stdout
+        else:
+            return r.stderr
+    except FileNotFoundError:
+        return None
+    except subprocess.SubprocessError as e:
+        return e
+
+
 def gen_id(seed=None, length=8) -> str:
-    random.seed(uuid.uuid4().hex) if seed is None else random.seed(seed + uuid.uuid4().hex)
+    random.seed(uuid.uuid4().hex) if seed is None else random.seed(
+        seed + uuid.uuid4().hex
+    )
     base = string.ascii_lowercase + string.ascii_uppercase + string.digits
     return "".join(random.choice(base) for _ in range(length))
 

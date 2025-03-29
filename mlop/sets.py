@@ -23,6 +23,7 @@ class Settings:
 
     _op_name: str = None
     _op_id: int = None
+    _op_status: int = 1
 
     store_db: str = "store.db"
     store_table_data: str = "data"
@@ -69,7 +70,7 @@ class Settings:
     def to_dict(self) -> dict[str, any]:
         return {key: getattr(self, key) for key in self.__annotations__.keys()}
 
-    def work_dir(self) -> str:
+    def get_dir(self) -> str:
         return os.path.join(
             self.dir, "." + self.tag, self.project, self._op_name, str(self._op_id)
         )

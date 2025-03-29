@@ -48,9 +48,9 @@ class File:
         with open(self._path, "rb") as f:
             return hashlib.sha256(f.read()).hexdigest()
 
-    def _mkcopy(self, work_dir) -> None:
+    def _mkcopy(self, dir) -> None:
         if not hasattr(self, "_tmp"):
-            self._tmp = f"{work_dir}/files/{self._name}-{self._id}{self._ext}"
+            self._tmp = f"{dir}/files/{self._name}-{self._id}{self._ext}"
             shutil.copyfile(self._path, self._tmp)
             if hasattr(self, "_image"):
                 os.remove(self._path)
@@ -90,10 +90,10 @@ class Image(File):
                     logger.debug("Image: attempted conversion from array")
                     self._image = make_compat_numpy(data)
 
-    def load(self, work_dir=None):
+    def load(self, dir=None):
         if not self._path:
-            if work_dir:
-                self._tmp = f"{work_dir}/files/{self._name}-{self._id}{self._ext}"
+            if dir:
+                self._tmp = f"{dir}/files/{self._name}-{self._id}{self._ext}"
                 self._image.save(self._tmp, format=self._ext[1:])
                 self._path = os.path.abspath(self._tmp)
             else:

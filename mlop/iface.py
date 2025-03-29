@@ -137,13 +137,16 @@ class ServerInterface:
             if t is not None:
                 t.join(timeout=None)
                 t = None
+        self._update_status(self.settings)
+        logger.info(f"{tag}: find uploaded data at {print_url(self.settings.url_view)}")
+
+    def _update_status(self, settings):
         r = self._post_v1(
             self.settings.url_stop,
             self.headers,
-            make_compat_stop_v1("COMPLETED", self.settings),
+            make_compat_stop_v1(self.settings),
             client=self.client,
         )
-        logger.info(f"{tag}: find uploaded data at {print_url(self.settings.url_view)}")
 
     def _update_meta(self, meta):
         r = self._post_v1(
@@ -156,7 +159,7 @@ class ServerInterface:
     def _worker_publish(self, e, h, q, b, stop, name=None):
         while not (q.empty() and stop()):  # terminates only when both conditions met
             if q.empty():
-                time.sleep(self.settings.x_internal_check_process) # debounce
+                time.sleep(self.settings.x_internal_check_process)  # debounce
             else:
                 _ = self._post_v1(
                     e,
@@ -198,7 +201,9 @@ class ServerInterface:
                         )
                         self._thread_storage.start()
         except Exception as e:
-            logger.critical("%s: failed to send files to %s: %s", tag, self.settings.url_file, e)
+            logger.critical(
+                "%s: failed to send files to %s: %s", tag, self.settings.url_file, e
+            )
 
     def _queue_iter(self, q, b):
         s = time.time()
