@@ -9,6 +9,7 @@ STATUS = {
     signal.SIGINT.value: "TERMINATED",  # "INTERRUPTED",
 }
 
+
 def make_compat_start_v1(config, settings, info):
     return json.dumps(
         {
@@ -37,6 +38,7 @@ def make_compat_meta_v1(meta, settings):
             "runId": settings._op_id,
             # "runName": settings._op_name,
             # "projectName": settings.project,
+            "logType": "METRIC",  # TODO: handle other log types IMAGE, VIDEO, AUDIO, FILE
             "logName": meta,  # TODO: better aggregate
         }
     ).encode()
