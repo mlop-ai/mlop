@@ -8,7 +8,7 @@ import threading
 import time
 from collections.abc import Mapping
 
-from .api import make_compat_start_v1
+from .api import make_compat_monitor_v1, make_compat_start_v1
 from .auth import login
 from .file import Audio, File, Image
 from .iface import ServerInterface
@@ -57,9 +57,9 @@ class OpsMonitor:
     def _worker_monitor(self, stop):
         while not stop():
             self.op._iface.publish(
-                data=self.op.settings.system.monitor(),
+                data=make_compat_monitor_v1(self.op.settings.system.monitor()),
                 file=None,
-                timestamp=int(time.time()),
+                timestamp=time.time(),
                 step=self.op._step,
             ) if self.op._iface else None
             time.sleep(self.op.settings.x_sys_sampling_interval)
@@ -117,7 +117,9 @@ class Ops:
 
     def start(self) -> None:
         self._iface.start() if self._iface else None
-        self._iface._update_meta(list(self.settings.system.monitor().keys())) if self._iface else None
+        self._iface._update_meta(
+            list(make_compat_monitor_v1(self.settings.system.monitor()).keys())
+        ) if self._iface else None
         self._monitor.start()
         logger.debug(f"{tag}: started")
 
@@ -173,7 +175,7 @@ class Ops:
             logger.critical("%s: failed: %s", tag, e)
             raise e
 
-        t = int(time.time())
+        t = time.time()
         if step is not None:
             if step > self._step:
                 self._step = step

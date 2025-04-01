@@ -1,71 +1,86 @@
-# import sys
-# sys.path.append(sys.path[0] + "/..")
-
 import os
-import platform
 import random
 import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
-from .args import parse, read_sets_compat
+from .args import get_prefs, init_test, timer
 
-TAG = "test-image"
-ITEM_PER_EPOCH = 10
-WAIT = ITEM_PER_EPOCH * 0.01
-if platform.system() == "Linux":  # or platform.machine() == "x86_64"
-    NUM_EPOCHS = 2  # for actions
-else:
-    NUM_EPOCHS = 40
-TOTAL = NUM_EPOCHS * ITEM_PER_EPOCH
-INIT = time.time()
-
-FILE_NAME = ".mlop/files/image"
-os.makedirs(f"{os.path.dirname(FILE_NAME)}", exist_ok=True)
-IMAGE = Image.new("RGBA", (1, 1), (255, 255, 255, 0))
-IMAGE.save(f"{FILE_NAME}.png")
-
-args = parse(TAG)
-mlop, settings = read_sets_compat(args, TAG)
+TAG = "image"
 
 
-for i in range(TOTAL):
-    image = np.random.randint(low=0, high=256, size=(100, 100, 3))
-    file = mlop.Image(image)
-print(f"{TAG}: Instantiation time for {i} images: {time.time() - INIT:.4f}s")
+def gen_mpl_image(size: tuple = (100, 100)):
+    noise = np.random.rand(*size)
+    x = np.linspace(0, 1, size[1])
+    y = np.linspace(0, 1, size[0])
+    X, Y = np.meshgrid(x, y)
+    gradient = X + Y
+    image = (noise + gradient) / 2
+    fig, ax = plt.subplots(figsize=(1, 1), dpi=100)
+    ax.imshow(image, cmap="viridis")
+    ax.axis("off")
+    return fig, ax
 
-run = mlop.init(dir=".mlop/", project=TAG, settings=settings)
-# run.log({"test-image": mlop.File(".mlop/image.png")})
 
-for e in range(NUM_EPOCHS):
-    examples = []
-    RUN = time.time()
-    for i in range(ITEM_PER_EPOCH):
-        if i % 2 == 0:
-            file = Image.new(
-                "RGB",
-                (100, 100),
-                (
-                    random.randint(0, 255),
-                    random.randint(0, 255),
-                    random.randint(0, 255),
-                ),
-            )
-            image = f"{FILE_NAME}-{e}-{i}.png"
-            file.save(image)
-        else:
-            image = np.random.randint(low=0, high=256, size=(100, 100, 3))
-
-        # user shouldn't attempt to repeatedly log image with the same filename
-        file = mlop.Image(image, caption=f"random-field-{e}-{i}")
-        examples.append(file)
-        run.log({"A/iter": i})
-        run.log({f"B/{e}-{i}": file})
-    run.log({"B/0": examples})
-    print(
-        f"{TAG}: Epoch {e + 1} / {NUM_EPOCHS} took {time.time() - RUN:.4f}s, now waiting {WAIT}s"
+def gen_pil_image(size: tuple = (100, 100)):
+    return Image.new(
+        "RGB",
+        size,
+        (
+            random.randint(0, 255),
+            random.randint(0, 255),
+            random.randint(0, 255),
+        ),
     )
-    time.sleep(WAIT)
 
-print(f"{TAG}: Script time ({TOTAL}): {time.time() - INIT:.4f}s")
+
+@timer
+def test_image(
+    mlop, run, FILE_NAME=f".mlop/files/{TAG}", NUM_EPOCHS=None, ITEM_PER_EPOCH=None
+):
+    os.makedirs(f"{os.path.dirname(FILE_NAME)}", exist_ok=True)
+
+    if NUM_EPOCHS is None or ITEM_PER_EPOCH is None:
+        NUM_EPOCHS = get_prefs(TAG)["NUM_EPOCHS"]
+        ITEM_PER_EPOCH = get_prefs(TAG)["ITEM_PER_EPOCH"]
+    WAIT = ITEM_PER_EPOCH * 0.01
+
+    inst_time = time.time()
+    for i in range(NUM_EPOCHS * ITEM_PER_EPOCH):
+        image = np.random.randint(low=0, high=256, size=(100, 100, 3))
+        _ = mlop.Image(image)
+    print(f"{TAG}: Instantiation time for {i} images: {time.time() - inst_time:.4f}s")
+
+    for e in range(NUM_EPOCHS):
+        epoch_time = time.time()
+        for i in range(ITEM_PER_EPOCH):
+            fp = f"{FILE_NAME}-{e}-{i}.png"
+            pil_img = gen_pil_image()
+            pil_img.save(fp)
+            mpl_img, _ = gen_mpl_image()
+            np_img = np.random.randint(low=0, high=256, size=(100, 100, 3))
+
+            images = [
+                ("file", mlop.Image(fp, caption=f"file-{e}-{i}")),
+                ("pil", mlop.Image(pil_img, caption=f"pil-{e}-{i}")),
+                ("np", mlop.Image(np_img, caption=f"np-{e}-{i}")),
+                # TODO: make mpl more efficient
+                ("mpl", mlop.Image(mpl_img, caption=f"mpl-{e}-{i}")),
+            ]
+
+            examples = [img for _, img in images]
+            for img_type, img in images:
+                run.log({f"{TAG}/{img_type}/{e}-{i}": img})
+            run.log({f"{TAG}/all": examples})
+
+        print(
+            f"{TAG}: Epoch {e + 1} / {NUM_EPOCHS} took {time.time() - epoch_time:.4f}s, sleeping {WAIT}s"
+        )
+        time.sleep(WAIT)
+
+
+if __name__ == "__main__":
+    mlop, run = init_test(TAG)
+    test_image(mlop, run)

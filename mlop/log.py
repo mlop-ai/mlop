@@ -53,7 +53,7 @@ class ConsoleHandler:
             self.count += 1
             m = line.rstrip()
             self.queue.put(
-                make_compat_message_v1(self.level, m, int(time.time()), self.count)
+                make_compat_message_v1(self.level, m, time.time(), self.count)
             )
             self.logger.log(self.level, m)
         self.stream.write(buf)

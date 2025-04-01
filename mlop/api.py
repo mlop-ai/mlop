@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import signal
 
 STATUS = {
@@ -8,6 +9,15 @@ STATUS = {
     1: "FAILED",
     signal.SIGINT.value: "TERMINATED",  # "INTERRUPTED",
 }
+
+ABBR = {
+    "pct": "percentage",
+    "net": "network",
+    "mem": "memory",
+    "recv": "received",
+    "bytes_": "bytes/",
+}
+
 
 def make_compat_start_v1(config, settings, info):
     return json.dumps(
@@ -41,6 +51,13 @@ def make_compat_meta_v1(meta, dtype, settings):
             "logName": meta,  # TODO: better aggregate
         }
     ).encode()
+
+
+def make_compat_monitor_v1(data):
+    if not ABBR:
+        return data
+    pattern = re.compile("|".join(map(re.escape, ABBR.keys())))
+    return {pattern.sub(lambda m: ABBR[m.group(0)], k): v for k, v in data.items()}
 
 
 def make_compat_data_v1(data, timestamp, step):
@@ -80,13 +97,14 @@ def make_compat_storage_v1(f, fl):
 
 
 def make_compat_message_v1(level, message, timestamp, step):
+    # TODO: server side int log level support
     line = [
         json.dumps(
             {
                 "time": int(timestamp * 1000),  # convert to ms
                 "message": message,
                 "lineNumber": step,
-                "logType": logging._levelToName.get(level)  # TODO: server side support int
+                "logType": logging._levelToName.get(level),
             }
         )
     ]

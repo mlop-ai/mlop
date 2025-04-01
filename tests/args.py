@@ -1,6 +1,11 @@
 import argparse
+import functools
 import importlib
 import os
+import platform
+import sys
+import time
+from typing import Any, Callable
 
 import keyring
 
@@ -10,6 +15,54 @@ URL_LIST = {
     "REMOTE": "https://server.mlop.ai",
     "REMOTE_API": "https://api.mlop.ai/api/create-run",
 }
+PLATFORM_PREFS = {
+    "Darwin": {
+        # TODO: for server to catch up and sync up live, may potentially tell server to only respond a status code when the entire batch has been processed in the backend db
+        "metric": {
+            "NUM_EPOCHS": 50_000,
+            "ITEM_PER_EPOCH": 20,
+        },
+        "image": {
+            "NUM_EPOCHS": 10,
+            "ITEM_PER_EPOCH": 10,
+        },
+        "audio": {
+            "NUM_EPOCHS": 10,
+            "ITEM_PER_EPOCH": 10,
+        },
+    },
+    "Linux": {
+        "metric": {
+            "NUM_EPOCHS": 10,
+            "ITEM_PER_EPOCH": 10,
+        },
+        "image": {
+            "NUM_EPOCHS": 2,
+            "ITEM_PER_EPOCH": 10,
+        },
+        "audio": {
+            "NUM_EPOCHS": 2,
+            "ITEM_PER_EPOCH": 10,
+        },
+    },
+}
+
+
+def get_prefs(TAG):
+    return PLATFORM_PREFS[platform.system()][TAG]
+
+
+def timer(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        s = time.time()
+        print(f"timer: Started {func.__name__}")
+        r = func(*args, **kwargs)
+        e = time.time()
+        print(f"timer: Finished {func.__name__}: took {e - s:.4f} seconds")
+        return r
+
+    return wrapper
 
 
 def parse(TAG):
@@ -84,3 +137,11 @@ def read_sets_compat(args, tag):
         d["insecure_disable_ssl"] = True
 
     return mlop, d
+
+
+@timer
+def init_test(TAG):
+    mlop, settings = read_sets_compat(parse(TAG), TAG)
+    run = mlop.init(dir=".mlop/", project="test-" + TAG, settings=settings)
+    sys.stderr.write("script: started stderr logging")
+    return mlop, run
