@@ -1,8 +1,9 @@
 import logging
 
-import torch
+import torch  # TODO: only import if needed
 
 import mlop
+from mlop.api import make_compat_graph_nodes_v1, make_compat_graph_v1
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Torch"
@@ -42,109 +43,398 @@ def watch(
         hooks.append(module.register_forward_hook(_forward(op, freq, bins)))
 
     if not disable_graph:
-        types = [
-            getattr(torch.nn, t)
-            for t in (
-                "Container",
-                "Sequential",
-                "ModuleList",
-                "ModuleDict",
-            )
-            if hasattr(torch.nn, t)
-        ]
-        op._torch._nodes = _to_dict(module)
-        hooks.append(module.register_forward_hook(_forward_child(op)))
-        hooks.extend(_hook_child(op, types, module, hooks))
+        module.apply(_add_hooks)
+        hooks.append(module.register_forward_hook(_forward_module(op)))
+
     return hooks
 
 
-def _to_dict(module):
-    d = get_module(module)
-
-    children = []
-    for idx, (name, child) in enumerate(module._modules.items()):
-        if child is None:
-            continue
-        child_dict = {"name": name, "order": idx}
-        child_dict.update(_to_dict(child))
-        children.append(child_dict)
-
-    if children:
-        d["children"] = children
-
-    return d
-
-
-def _hook_child(op, types, module, hooks=[], prefix=None):
-    for name, child in module.named_children():
-        if prefix:
-            name = f"{prefix}.{name}"
-        try:
-            hooks.append(child.register_forward_hook(_forward_child(op)))
-            hooks = _hook_child(op, types, child, hooks, name)
-        except RuntimeError as e:
-            logger.error("%s: failed to watch child %s: %s", tag, name, e)
-    return hooks
-
-
-def _forward_child(op):
+def _forward_module(op):
     c = [0]
 
     def f(module, input, output):
         if c[0] == 1:
             if op._torch._nodes:
-                if not hasattr(op._torch, "_ready"):
-                    op._torch._ready = True
+                import json
+
+                with open("module.json", "w") as f:
+                    json.dump(op._torch._nodes, f)
+
+                op._iface._post_v1(
+                    op.settings.url_graph,
+                    op._iface.headers,
+                    make_compat_graph_v1(op.settings, "torch", op._torch._nodes),
+                    client=op._iface.client,
+                ) if op._iface else None
+                op._torch._nodes = []
             return
+
         c[0] = 1
-
-        if not isinstance(input, tuple):
-            input = (input,)
-        if not isinstance(output, tuple):
-            output = (output,)
-
-        n = _find_node(op._torch._nodes, id(module))
-        if n is not None:
-            n.update(
-                {
-                    "input": {
-                        "id": [
-                            t.data_ptr() if hasattr(t, "data_ptr") else id(t)
-                            for t in input
-                        ],
-                        "shape": [get_shape(i) for i in input],
-                        "grad_fn": [
-                            id(i.grad_fn) if hasattr(i, "grad_fn") else None
-                            for i in input
-                        ],
-                        "next": [
-                            [id(f) for f, _ in i.grad_fn.next_functions]
-                            if hasattr(i.grad_fn, "next_functions")
-                            else None
-                            for i in input
-                        ],
-                    },
-                    "output": {
-                        "id": [
-                            t.data_ptr() if hasattr(t, "data_ptr") else id(t)
-                            for t in output
-                        ],
-                        "shape": [get_shape(i) for i in output],
-                        "grad_fn": [
-                            id(i.grad_fn) if hasattr(i, "grad_fn") else None
-                            for i in output
-                        ],
-                        "next": [
-                            [id(f) for f, _ in i.grad_fn.next_functions]
-                            if hasattr(i.grad_fn, "next_functions")
-                            else None
-                            for i in output
-                        ],
-                    },
-                }
-            )
+        # nodes = update_nodes(read_module(module).to_json(), _to_dict(module))
+        op._torch._nodes = make_compat_graph_nodes_v1(
+            _to_dict(module), ref=read_module(module).to_json()
+        )
 
     return f
+
+
+def _to_dict(module):
+    d = {"id": id(module), "type": module.__class__.__name__}
+
+    nodes = []
+    for idx, (name, c) in enumerate(module._modules.items()):
+        if c is None:
+            continue
+        n = {"name": name, "order": idx}
+        n.update(_to_dict(c))
+        nodes.append(n)
+
+    if nodes:
+        d["nodes"] = nodes
+
+    return d
+
+
+class ModuleInst:
+    def __init__(self, module, inst_id, struct_id, num_in, num_out):
+        self.module: torch.nn.Module = module
+        self.inst_id = inst_id
+        self.struct_id = struct_id
+        self._graph = mlop.Graph()
+
+        for i in range(num_in):
+            self._graph.add_node(node=f"in_{i}", label=f"Input {i}")
+
+        for i in range(num_out):
+            self._graph.add_node(node=f"out_{i}", label=f"Output {i}")
+
+    def _get_up_struct(self, module, inst_id):  # get upstream
+        return self._up_filter(
+            lambda node: node.module == module and node.inst_id == inst_id
+        )
+
+    def _up_filter(self, fn):
+        for node in self._graph.nodes:
+            if isinstance(node, ModuleInst):
+                if fn(node):
+                    return node
+        return None
+
+    def to_json(self):
+        nodes = []
+        for node in self._graph.nodes:
+            if isinstance(node, str):
+                nodes.append(
+                    {
+                        "label": self._graph.nodes[node].get("label"),
+                        "node_id": str(node),
+                        "node_type": "io",
+                    }
+                )
+            else:
+                nodes.append(
+                    {
+                        "label": f"{node.module.__class__.__name__} (Instance {node.inst_id})",
+                        "node_id": f"s_{node.struct_id}",
+                        "node_type": "module",
+                        **node.to_json(),
+                    }
+                )
+
+        edges = list(self._graph.edges())
+
+        info = {
+            "type": self.module.__class__.__name__,
+            "id": id(self.module),
+            "inst_id": str(self.inst_id),
+            "nodes": nodes,
+            "edges": [
+                [
+                    str(src) if isinstance(src, str) else f"s_{src.struct_id}",
+                    str(dst) if isinstance(dst, str) else f"s_{dst.struct_id}",
+                ]
+                for src, dst in edges
+            ],
+            **get_args(self.module),
+            **get_params(self.module),
+        }
+
+        return info
+
+
+def read_module(module, inst_id=0):
+    struct_id = [0]
+
+    def process_grad_fn(  # use grad_fn to find upstream nodes
+        struct: ModuleInst,
+        grad_fn: torch.autograd.Function,
+        i_grad_fn=None,
+    ):
+        if grad_fn is None:
+            return []
+
+        next_functions = grad_fn.next_functions
+        if "BackwardHookFunctionBackward" in str(grad_fn) and i_grad_fn is not None:
+            next_functions = (next_functions[i_grad_fn],)
+
+        metadata = grad_fn.metadata
+
+        # input nodes
+        if "i_in" in metadata:
+            assert metadata["module"] == struct.module
+            assert metadata["inst_id"] == struct.inst_id
+            return [
+                {
+                    "node": f"in_{metadata['i_in']}",
+                    "index": metadata["i_in"],
+                    "grad_fn": None,
+                    "is_up": True,
+                }
+            ]
+
+        # output nodes
+        if "i_out" in metadata:
+            up_module = metadata["module"]
+            inst_id = metadata["inst_id"]
+
+            up_struct = struct._get_up_struct(up_module, inst_id)
+
+            if up_struct is None:
+                up_struct = read_up(up_module, inst_id)
+                struct._graph.add_node(node=up_struct, struct_id=up_struct.struct_id)
+
+            return [
+                {
+                    "node": up_struct,
+                    "index": metadata["i_out"],
+                    "grad_fn": None,
+                    "is_up": False,
+                }
+            ]
+
+        # intermediate nodes using cache
+        if "up_cache" in metadata and i_grad_fn in metadata["up_cache"]:
+            return metadata["up_cache"][i_grad_fn]
+
+        # intermediate nodes
+        ups = [process_grad_fn(struct, n[0], n[1]) for n in next_functions]
+        for i, _ in enumerate(ups):
+            while i < len(ups) and isinstance(ups[i], (list, tuple)):
+                ups[i : i + 1] = ups[i]
+
+        if "up_cache" not in metadata:
+            metadata["up_cache"] = {}
+        metadata["up_cache"][i_grad_fn] = ups
+
+        return ups
+
+    def read_up(module, inst_id):
+        structure = ModuleInst(
+            module,
+            inst_id,
+            struct_id[0],
+            len(module._metadata["grad_fn_in"][inst_id]),
+            len(module._metadata["grad_fn_out"][inst_id]),
+        )
+        struct_id[0] += 1
+
+        # start with output nodes going back
+        to_process = []
+        for i, output_grad_fn in enumerate(
+            structure.module._metadata["grad_fn_out"][structure.inst_id]
+        ):
+            to_process.append(
+                {
+                    "node": f"out_{i}",
+                    "index": i,
+                    "grad_fn": output_grad_fn,
+                    "is_up": False,
+                }
+            ) if output_grad_fn is not None else None
+
+        # process nodes
+        s = set()
+        while to_process:
+            down = to_process.pop(0)
+
+            # find upstream nodes
+            ups = process_grad_fn(structure, down["grad_fn"])
+
+            for up in ups:
+                structure._graph.add_edge(
+                    up["node"],
+                    down["node"],
+                    up_i_out=up["index"],
+                    down_i_in=down["index"],
+                )
+
+                if isinstance(up["node"], str):  # skip input
+                    if up["node"].startswith("in_"):
+                        continue
+
+                up_module = up["node"]
+                if isinstance(up_module, ModuleInst):
+                    id_module = (
+                        id(up_module.module),
+                        up_module.inst_id,
+                    )
+                    if id_module not in s:
+                        s.add(id_module)
+                        for j, input_grad_fn in enumerate(
+                            up_module.module._metadata["grad_fn_in"][up_module.inst_id]
+                        ):
+                            to_process.append(
+                                {
+                                    "node": up_module,
+                                    "index": j,
+                                    "grad_fn": input_grad_fn,
+                                    "is_up": False,
+                                }
+                            ) if input_grad_fn is not None else None
+
+        return structure
+
+    return read_up(module, inst_id)
+
+
+def _add_hooks(module):
+    module._metadata = {
+        "tracking": False,
+        "grad_fn_in": {},
+        "grad_fn_out": {},
+        "num_fwd": 0,
+    }
+    if not module._metadata["tracking"]:
+        module.register_forward_pre_hook(_pre_hook)
+        module.register_forward_hook(_post_hook)
+        module._metadata["tracking"] = True
+
+
+def _add_metadata(module, inputs, outputs):
+    if hasattr(module, "_metadata"):
+        module._metadata["shape"] = {
+            "in": [get_shape(i) for i in inputs],
+            "out": [get_shape(o) for o in outputs],
+        }
+        module._metadata["id"] = {
+            "in": [t.data_ptr() if hasattr(t, "data_ptr") else id(t) for t in inputs],
+            "out": [t.data_ptr() if hasattr(t, "data_ptr") else id(t) for t in outputs],
+        }
+
+
+def _pre_hook(module, inputs):
+    inputs = _enforce_grad(inputs)
+    module._metadata["grad_fn_in"][module._metadata["num_fwd"]] = _next_grad_fns(inputs)
+    module._metadata["num_fwd"] += 1
+    return _enforce_grad(inputs)
+
+
+def _post_hook(module, inputs, outputs):
+    if not isinstance(outputs, tuple):
+        outputs, s = (outputs,), True
+
+    _add_metadata(module, inputs, outputs)
+    inst_id = module._metadata["num_fwd"] - 1
+    outputs = _enforce_grad(outputs)
+    module._metadata["grad_fn_out"][inst_id] = _grad_fns(outputs)
+    outputs = _enforce_grad(outputs)
+
+    for io, i_name in [
+        (_next_grad_fns(inputs), "i_in"),
+        (_grad_fns(outputs), "i_out"),
+    ]:
+        for i, grad_fn in enumerate(io):
+            assert isinstance(grad_fn.metadata, dict)
+
+            grad_fn.metadata["module"] = module
+            grad_fn.metadata["inst_id"] = inst_id
+            grad_fn.metadata[i_name] = i
+
+    return outputs[0] if s else outputs
+
+
+def _enforce_grad(tensors):
+    def process_tensor(t):
+        dummy_tensor = torch.tensor(0.0, requires_grad=True)
+        return t + dummy_tensor if torch.is_floating_point(t) else t
+
+    return tuple(process_tensor(t) for t in tensors if t is not None)
+
+
+def _grad_fns(tensors):
+    def process_tensor(tensor):
+        return tensor.grad_fn if tensor.requires_grad else None
+
+    return tuple(process_tensor(tensor) for tensor in tensors if tensor is not None)
+
+
+def _next_grad_fns(tensors):
+    # workaround from torchexplorer
+    if tensors[0] is not None and "BackwardHookFunctionBackward" in str(
+        tensors[0].grad_fn
+    ):
+        return tuple(f[0] for f in tensors[0].grad_fn.next_functions)
+
+    return _grad_fns(tensors)
+
+
+def get_params(module):
+    # TODO: find a robust solution to get params efficiently
+    info = {
+        "params": {
+            name: list(param.size())
+            for name, param in module.named_parameters()
+            if "." not in name
+        }
+    }
+    return info if info["params"] else {}
+
+
+def get_args(module):
+    info = {
+        "args": [],
+        "kwargs": {},
+    }
+
+    if hasattr(module, "in_channels") and hasattr(module, "out_channels"):
+        info["args"] = [module.in_channels, module.out_channels]
+    elif hasattr(module, "in_features") and hasattr(module, "out_features"):
+        info["args"] = [module.in_features, module.out_features]
+
+    for k, v in module.__dict__.items():  # dir(module)
+        if not k.startswith("_") and not callable(v):  # skip private attrs and methods
+            if isinstance(v, torch.Size):
+                v = tuple(v)
+            elif hasattr(v, "item"):
+                try:
+                    v = v.item()
+                except Exception:
+                    continue
+            if (
+                v is not None
+                and v != ()
+                and v != []
+                and isinstance(v, (int, float, str, bool))
+            ):
+                info["kwargs"][k] = v
+
+    return info
+
+
+def get_shape(tensor, r=set()):
+    if hasattr(tensor, "size"):
+        return list(tensor.size())  # pytorch
+    elif hasattr(tensor, "get_shape"):
+        return tensor.get_shape().as_list()  # tensorflow
+    elif hasattr(tensor, "shape"):
+        return tensor.shape
+
+    try:
+        r.add(id(tensor))
+        return [get_shape(i, r) if id(i) not in r else 0 for i in tensor]
+    except TypeError:
+        logger.error(f"{tag}: {tensor} is not iterable")
+        return []
 
 
 def _backward(op, name, freq, bins):
@@ -190,64 +480,6 @@ def check_param(param, name):
             f"{tag}: {name} is of type {type(param).__module__}.{type(param).__name__} and not a torch.Variable"
         )
         return False
-
-
-def get_module(module):
-    info = {
-        "type": module.__class__.__name__,
-        "id": id(module),
-        "args": [],
-        "kwargs": {},
-    }
-
-    if hasattr(module, "in_channels") and hasattr(module, "out_channels"):
-        info["args"] = [module.in_channels, module.out_channels]
-    elif hasattr(module, "in_features") and hasattr(module, "out_features"):
-        info["args"] = [module.in_features, module.out_features]
-
-    for k, v in module.__dict__.items():  # dir(module)
-        if not k.startswith("_") and not callable(v):  # skip private attrs and methods
-            if isinstance(v, torch.Size):
-                v = tuple(v)
-            elif hasattr(v, "item"):
-                try:
-                    v = v.item()
-                except Exception:
-                    continue
-            if (
-                v is not None
-                and v != ()
-                and v != []
-                and isinstance(v, (int, float, str, bool))
-            ):
-                info["kwargs"][k] = v
-
-    # TODO: find a more robust solution to enforce params
-    params = {
-        pname: list(param.size())
-        for pname, param in module.named_parameters()
-        if "." not in pname
-    }
-    if params:
-        info.update({"params": params})
-
-    return info
-
-
-def get_shape(tensor, r=set()):
-    if hasattr(tensor, "size"):
-        return list(tensor.size())  # pytorch
-    elif hasattr(tensor, "get_shape"):
-        return tensor.get_shape().as_list()  # tensorflow
-    elif hasattr(tensor, "shape"):
-        return tensor.shape
-
-    try:
-        r.add(id(tensor))
-        return [get_shape(i, r) if id(i) not in r else 0 for i in tensor]
-    except TypeError:
-        logger.error(f"{tag}: {tensor} is not iterable")
-        return []
 
 
 def make_compat_histogram_tensor(tensor, bins=64):
@@ -313,16 +545,3 @@ def make_compat_tensor(tensor):
         return tensor[torch.isfinite(tensor)]  # remove inf/nan
     else:
         return tensor
-
-
-def _find_node(nodes, target_id):
-    if nodes.get("id") == target_id:
-        return nodes
-
-    if "children" in nodes:
-        for child in nodes["children"]:
-            result = _find_node(child, target_id)
-            if result is not None:
-                return result
-
-    return None

@@ -19,6 +19,52 @@ class Data:  # TODO: add table class
         }
 
 
+class Graph(Data):
+    tag = "Graph"
+
+    def __init__(self, data={}):
+        self._nodes = data.get("nodes", {})
+        self._edges = data.get("edges", {})
+        self._successors = data.get("successors", {})
+        self._predecessors = data.get("predecessors", {})
+        super().__init__(data=self.to_data())
+
+    def add_node(self, node, **attr):
+        if node not in self._nodes:
+            self._nodes[node] = attr
+            self._successors[node] = set()
+            self._predecessors[node] = set()
+        else:
+            self._nodes[node].update(attr)
+
+    def add_edge(self, src, dst, **attr):
+        if src not in self._nodes:
+            self.add_node(src)
+        if dst not in self._nodes:
+            self.add_node(dst)
+
+        self._edges[(src, dst)] = attr
+        self._successors[src].add(dst)
+        self._predecessors[dst].add(src)
+
+    @property
+    def nodes(self):
+        return self._nodes
+
+    def edges(self, data=False):
+        if data:
+            return list(self._edges.items())
+        return list(self._edges.keys())
+
+    def to_data(self):
+        return {
+            "nodes": self._nodes,
+            "edges": self._edges,
+            "successors": self._successors,
+            "predecessors": self._predecessors,
+        }
+
+
 class Histogram(Data):
     tag = "Histogram"
 

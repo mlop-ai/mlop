@@ -4,7 +4,10 @@ import re
 import signal
 
 from .data import Histogram
-from .util import clean_dict
+from .util import clean_dict, find_node
+
+logger = logging.getLogger(f"{__name__.split('.')[0]}")
+tag = "API"
 
 STATUS = {
     -1: "RUNNING",
@@ -160,3 +163,33 @@ def make_compat_graph_v1(settings, name, nodes):
     return json.dumps(
         {"runId": settings._op_id, "graph": {"format": name, "nodes": nodes}}
     ).encode()
+
+def make_compat_graph_nodes_v1(d, ref, p="", r={}):
+    if "name" not in d:
+        d["name"] = ""
+        name = "."
+    elif p == ".":
+        name = str(d["name"])
+    else:
+        name = f"{p}.{d['name']}"
+
+    if "id" in d:
+        n = d.copy()
+        n = {k: v for k, v in n.items() if k not in ["id", "nodes", "name"]}
+        r.update({name: n})
+
+        if ref:
+            rd = find_node(ref, d["id"], key="nodes")
+            if rd:
+                rn = rd.copy()
+                rn = {k: v for k, v in rn.items() if k not in ["id", "nodes"]}
+                r[name].update(rn)
+            else:
+                logger.debug(f"{tag}: {n} not found in reference dictionary when processing {name}")
+            r[name]["node_type"] = r[name]["node_type"].upper() if r[name].get("node_type") else "UNKNOWN"
+
+    if "nodes" in d:
+        for c in d["nodes"]:
+            make_compat_graph_nodes_v1(d=c, ref=ref, p=name, r=r)
+
+    return r

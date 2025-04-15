@@ -79,15 +79,6 @@ class OpMonitor:
                 if r.json()["status"] == "CANCELLED":
                     logger.critical(f"{tag}: server finished run")
                     os._exit(signal.SIGINT.value)  # TODO: do a more graceful exit
-                if hasattr(self.op, "_torch") and self.op._torch._nodes:
-                    if hasattr(self.op._torch, "_ready"):
-                        self.op._iface._post_v1(
-                            self.op.settings.url_graph,
-                            self.op._iface.headers,
-                            make_compat_graph_v1(self.op.settings, "torch", self.op._torch._nodes),
-                            client=self.op._iface.client,
-                        )
-                        self.op._torch._nodes = []
             except Exception as e:
                 logger.critical("%s: failed: %s", tag, e)
             time.sleep(self.op.settings.x_sys_sampling_interval)

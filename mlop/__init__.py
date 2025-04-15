@@ -1,6 +1,6 @@
 from .auth import login, logout
 from .compat.torch import watch
-from .data import Data, Histogram
+from .data import Data, Graph, Histogram
 from .file import Audio, File, Image
 from .init import init
 from .sets import Settings, setup
@@ -13,6 +13,7 @@ _hooks = []
 
 __all__ = (
     "Data",
+    "Graph",
     "Histogram",
     "File",
     "Image",

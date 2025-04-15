@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -45,6 +46,34 @@ class ANSI:
 
 def print_url(url):
     return f"{ANSI.underline}{url}{ANSI.reset}"
+
+
+def find_node(nodes, id, key="nodes"):
+    if nodes.get("id") == id:
+        return nodes
+
+    if key in nodes:
+        for child in nodes[key]:
+            result = find_node(child, id, key)
+            if result is not None:
+                return result
+
+    return None
+
+
+def update_node(src, dst):
+    d = find_node(src, id=dst["id"], key="nodes")
+    if d is not None:
+        d = copy.deepcopy(d)
+        if d.get("nodes"):
+            del d["nodes"]
+        dst.update(d)
+
+    if dst.get("nodes"):
+        for child in dst["nodes"]:
+            child = update_node(src, child)
+
+    return dst
 
 
 def run_cmd(cmd="ls"):
