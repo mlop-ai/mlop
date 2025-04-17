@@ -1,4 +1,5 @@
 import copy
+import importlib
 import json
 import logging
 import os
@@ -6,6 +7,7 @@ import random
 import shutil
 import string
 import subprocess
+import sys
 import time
 import uuid
 from typing import Sequence, Union
@@ -59,6 +61,22 @@ def find_node(nodes, id, key="nodes"):
                 return result
 
     return None
+
+
+def import_lib(m, a="None"):
+    try:
+        return sys.modules[m]
+    except KeyError:
+        try:
+            module = importlib.import_module(m)
+            if a:
+                globals()[a] = module
+            return module
+        except ImportError:
+            logger.error(
+                f"{tag}: {m} not installed; module-related functionality will be disabled"
+            )
+            return None
 
 
 def update_node(src, dst):

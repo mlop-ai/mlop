@@ -258,13 +258,13 @@ class ServerInterface:
                     name=name,
                 )
 
-    def _worker_storage(self, f, url):
+    def _worker_storage(self, f, url, data):
         _ = self._put_v1(
             url,
             {
                 "Content-Type": f._type,  # "application/octet-stream"
             },
-            open(f._path, "rb"),
+            data,
             client=self.client_storage,
         )
 
@@ -280,11 +280,17 @@ class ServerInterface:
             for k, fel in file.items():
                 for f in fel:
                     url = make_compat_storage_v1(f, d[k])
+                    with open(
+                        f._path, "rb"
+                    ) as file:  # TODO: data = open(f._path, "rb")
+                        data = file.read()
                     if not url:
                         logger.critical(f"{tag}: file api did not provide storage url")
                     else:
                         self._thread_storage = threading.Thread(
-                            target=self._worker_storage, args=(f, url), daemon=True
+                            target=self._worker_storage,
+                            args=(f, url, data),
+                            daemon=True,
                         )
                         self._thread_storage.start()
         except Exception as e:
@@ -340,9 +346,11 @@ class ServerInterface:
             )
         except Exception as e:
             logger.warning(
-                "%s: %s: no response from %s: %s: %s",
+                "%s: %s: retry %s/%s: no response from %s: %s: %s",
                 tag,
                 name,
+                retry + 1,
+                self.settings.x_file_stream_retry_max,
                 url,
                 type(e).__name__,
                 e,
