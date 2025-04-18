@@ -17,7 +17,7 @@ from .api import (
 )
 from .auth import login
 from .data import Data
-from .file import Audio, File, Image
+from .file import Audio, File, Image, Video
 from .iface import ServerInterface
 from .log import setup_logger, teardown_logger
 from .sets import Settings
@@ -252,7 +252,7 @@ class Op:
 
     def _op(self, n, d, f, k, v) -> None:
         if isinstance(v, File):
-            if isinstance(v, Image) or isinstance(v, Audio):
+            if isinstance(v, Image) or isinstance(v, Audio) or isinstance(v, Video):
                 v.load(self.settings.get_dir())
             # TODO: add step to serialise data for files
             v._mkcopy(self.settings.get_dir())  # key independent

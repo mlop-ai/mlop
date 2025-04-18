@@ -1,21 +1,26 @@
 import logging
-
-import torch  # TODO: only import if needed
+from typing import TYPE_CHECKING, Optional
 
 import mlop
 from mlop.api import make_compat_graph_nodes_v1, make_compat_graph_v1
+from mlop.util import import_lib
+
+if TYPE_CHECKING:
+    import torch
+else:
+    torch = import_lib("torch")
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Torch"
 
 
 def watch(
-    module: torch.nn.Module,
+    module: "torch.nn.Module",
     disable_graph: bool = False,
     disable_grad: bool = False,
     disable_param: bool = False,
-    freq: int | None = 1000,
-    bins: int | None = 64,
+    freq: Optional[int] = 1000,
+    bins: Optional[int] = 64,
     **kwargs,
 ):
     # TODO: remove legacy compat
@@ -356,7 +361,7 @@ def _add_metadata(module, inputs, outputs):
         }
 
 
-def _enforce_tuple(i, t=torch.Tensor):
+def _enforce_tuple(i, t=torch.Tensor if torch is not None else None):
     s = i is None or isinstance(i, t)
     r = (i,) if s else i
     return r, s
@@ -444,7 +449,7 @@ def get_shape(tensor, r=set()):
         r.add(id(tensor))
         return [get_shape(i, r) if id(i) not in r else 0 for i in tensor]
     except TypeError:
-        logger.error(f"{tag}: tensor {tensor} is not iterable")
+        logger.debug(f"{tag}: tensor {tensor} is not iterable")
         return []
 
 

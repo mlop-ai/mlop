@@ -15,6 +15,7 @@ dependencies = [
   "keyring",
   "pillow",
   "psutil",
+  "rich",
   "soundfile"
 ]
 

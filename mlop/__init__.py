@@ -1,7 +1,7 @@
 from .auth import login, logout
 from .compat.torch import watch
 from .data import Data, Graph, Histogram
-from .file import Audio, File, Image
+from .file import Audio, File, Image, Video
 from .init import init
 from .sets import Settings, setup
 from .sys import System
@@ -18,6 +18,7 @@ __all__ = (
     "File",
     "Image",
     "Audio",
+    "Video",
     "System",
     "Settings",
     "init",

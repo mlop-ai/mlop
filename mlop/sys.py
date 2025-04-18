@@ -52,12 +52,13 @@ class System:
             self.proc_info: Dict[str, Any] = self.proc.as_dict(attrs=["exe", "cmdline"])
             self.proc_child: List[psutil.Process] = self.proc.children(recursive=True)
             self.pid_child: List[int] = [p.pid for p in self.proc_child] + [self.pid]
+        
+        self.requirements: List[str] = [
+            f"{p.metadata['Name']}=={p.version}"
+            for p in importlib.metadata.distributions()
+        ]
         if self.settings.mode == "debug":  # privacy guard
             self.environ: Dict[str, str] = self.proc.environ()
-            self.requirements: List[str] = [
-                f"{p.metadata['Name']}=={p.version}"
-                for p in importlib.metadata.distributions()
-            ]
 
         self.gpu: Dict[str, Any] = self.get_gpu()
         self.git: Dict[str, Any] = self.get_git()
@@ -166,6 +167,7 @@ class System:
                 "swap": self.sswap["total"],
             },
             "boot_time": self.boot_time,
+            "requirements": self.requirements,
         }
         if self.gpu:
             d["gpu"] = {}
@@ -182,7 +184,6 @@ class System:
                 "disk": self.disk,
                 "network": self.net_if_addrs,
                 "users": self.users,
-                "requirements": self.requirements,
             }
         return d
 

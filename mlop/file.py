@@ -6,6 +6,7 @@ import re
 import shutil
 import tempfile
 import uuid
+from pathlib import Path
 from typing import Union
 
 import numpy as np
@@ -149,6 +150,100 @@ class Audio(File):
                 self._path = os.path.abspath(self._tmp)
 
         super().__init__(path=self._path, name=self._name)
+
+
+class Video(File):
+    tag = "Video"
+
+    def __init__(
+        self,
+        data: Union[str, np.ndarray],
+        rate: int | None = 30,
+        caption: str | None = None,
+        **kwargs,
+    ) -> None:
+        if "fps" in kwargs:
+            rate = kwargs["fps"]
+
+        self._name = caption or f"{uuid.uuid4()}"
+        self._id = f"{uuid.uuid4()}{uuid.uuid4()}".replace("-", "")
+        self._ext = ".mp4"
+
+        if isinstance(data, str):
+            logger.debug(f"{self.tag}: used file")
+            self._video = "file"
+            self._path = os.path.abspath(data)
+        else:
+            self._path = None
+            if hasattr(data, "numpy") or isinstance(data, np.ndarray):
+                if hasattr(data, "numpy"):
+                    logger.debug(f"{self.tag}: used tensor")
+                    self._data = data.numpy()
+                else:
+                    logger.debug(f"{self.tag}: used numpy array")
+                    self._data = data
+                self._rate = rate
+                self._video = make_compat_video_moviepy(self._data, self._rate)
+            else:
+                logger.critical(f"{self.tag}: unsupported data type: %s", type(data))
+
+    def load(self, dir=None):
+        if not self._path:
+            if dir:
+                self._tmp = f"{dir}/files/{self._name}-{self._id}{self._ext}"
+                try:
+                    make_compat_video_imageio(
+                        self._tmp, self._video, self._rate
+                    )  # self._video.write_videofile(self._tmp)
+                except TypeError as e:
+                    Path(self._tmp).touch()
+                    logger.critical("%s: failed to write video: %s", self.tag, e)
+                self._path = os.path.abspath(self._tmp)
+
+        super().__init__(path=self._path, name=self._name)
+
+
+def make_compat_video_imageio(f, clip, rate):
+    import imageio
+
+    writer = imageio.save(f, fps=rate)
+    for i in clip.iter_frames(fps=rate):
+        writer.append_data(i)
+    writer.close()
+
+
+def make_compat_video_moviepy(v: any, rate: int) -> any:
+    from moviepy.editor import ImageSequenceClip
+
+    t = make_compat_video_numpy(v)
+    # _, h, w, c = t.shape
+    clip = ImageSequenceClip(list(t), fps=rate)
+    return clip
+
+
+def make_compat_video_numpy(v: any) -> any:
+    import numpy as np
+
+    if v.ndim < 4:
+        logger.critical(
+            f"{tag}: video data must have at least 4 dimensions: time, channel, height, width"
+        )
+        return None
+    elif v.ndim == 4:
+        v = v.reshape(1, *v.shape)
+    b, t, c, h, w = v.shape
+
+    if v.dtype != np.uint8:
+        logger.warning(f"{tag}: converting video data to uint8")
+        v = v.astype(np.uint8)
+
+    rows = 2 ** ((b.bit_length() - 1) // 2)
+    cols = v.shape[0] // rows
+
+    v = v.reshape(rows, cols, t, c, h, w)
+    v = np.transpose(v, axes=(2, 0, 4, 1, 5, 3))
+    v = v.reshape(t, rows * h, cols * w, c)
+    return v
 
 
 def make_compat_image_matplotlib(val: any) -> any:
