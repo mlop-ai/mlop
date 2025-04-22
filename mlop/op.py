@@ -205,19 +205,21 @@ class Op:
     ):
         message = kwargs.get("text", message)
         wait = kwargs.get("wait_duration", wait)
-        url = kwargs.get("url", self.settings.url_webhook)
+        url = url or self.settings.url_webhook
 
         t = time.time()
+        time.sleep(wait)
+        if logging._nameToLevel.get(level) is not None:
+            logger.log(logging._nameToLevel[level], f"{tag}: {title}: {message}")
         if remote or not url:  # force remote alert
             pass
         else:
-            if logging._nameToLevel.get(level) is not None:
-                logger.log(logging._nameToLevel[level], f"{tag}: {title}: {message}")
-            time.sleep(wait)
             self._iface._post_v1(
                 url,
-                self._iface.headers,
-                make_compat_webhook_v1(t, level, title, message, self._step, self.settings.url_view),
+                {"Content-Type": "application/json"},
+                make_compat_webhook_v1(
+                    t, level, title, message, self._step, self.settings.url_view
+                ),
                 self._iface.client,  # TODO: check client
             ) if self._iface else logger.warning(
                 f"{tag}: alert not sent since interface is disabled"

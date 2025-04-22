@@ -227,11 +227,11 @@ def make_compat_webhook_v1(timestamp, level, title, message, step, url):
                         "type": "mrkdwn",
                         "text": (
                             f"`{level}` *{title}:* {message}\n\n"
-                            f"*Step:* {step}\n"
-                            f"*Local Time:* <!date^{int(timestamp)}^"
+                            + f"_<{url}|Check out live updates for this run>_\n"
+                            + f"*Local Time:* <!date^{int(timestamp)}^"
                             + "{date_short_pretty} {time_secs}"
                             + "|Time>\n"
-                            f"_<{url}|See live updates about this run>_"
+                            + f"*Step:* {step}\n"
                         ),
                     },
                 }
