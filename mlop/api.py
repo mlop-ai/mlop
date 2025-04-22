@@ -26,7 +26,7 @@ ABBR = {
 }
 
 
-def make_compat_check_v1(settings):
+def make_compat_trigger_v1(settings):
     return json.dumps(
         {
             "runId": settings._op_id,
@@ -203,6 +203,22 @@ def make_compat_graph_nodes_v1(d, ref, dep=0, p="", r={}):
             make_compat_graph_nodes_v1(d=c, ref=ref, dep=dep + 1, p=name, r=r)
 
     return r
+
+
+def make_compat_alert_v1(settings, t, m, n, level, url, **kwargs):
+    return json.dumps(
+        {
+            "runId": settings._op_id,
+            "alert": {
+                "timestamp": int(t * 1000),
+                "level": level,
+                "title": n,
+                "body": m,
+                "email": kwargs.get("email", None),
+                "url": kwargs.get("url", None),
+            },
+        }
+    ).encode()
 
 
 def make_compat_webhook_v1(timestamp, level, title, message, step, url):

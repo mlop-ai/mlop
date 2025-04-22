@@ -143,7 +143,8 @@ def read_sets_compat(args, tag):
             d["_url_ingest"] = urls["INGEST"]
 
             d["url_token"] = f"{d['_url']}/api-keys"
-            d["url_trigger"] = f"{d['_url_py']}/api/runs/triggers"
+            d["url_alert"] = f"{d['_url_py']}/api/runs/alert"
+            d["url_trigger"] = f"{d['_url_py']}/api/runs/trigger"
             d["url_start"] = f"{d['_url_api']}/api/runs/create"
             d["url_stop"] = f"{d['_url_api']}/api/runs/status/update"
             d["url_meta"] = f"{d['_url_api']}/api/runs/logName/add"

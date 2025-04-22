@@ -10,7 +10,7 @@
 [![build](https://img.shields.io/github/actions/workflow/status/mlop-ai/mlop/mlop.yml)](https://github.com/mlop-ai/mlop/actions/workflows/mlop.yml)
 [![license](https://img.shields.io/github/license/mlop-ai/mlop)](https://github.com/mlop-ai/mlop/blob/main/LICENSE)
 
-**MLOP** is a Machine Learning Operations (MLOps) framework. It provides superior experimental tracking capabilities as well as lifecycle management for training ML models. To get started, [try out our introductory notebook](https://colab.research.google.com/github/mlop-ai/mlop/blob/main/examples/intro.ipynb) or [get an account with us today](https://demo.mlop.ai/auth/sign-up)!
+**MLOP** is a Machine Learning Operations (MLOps) framework. It provides superior experimental tracking capabilities as well as lifecycle management for training ML models. To get started, [try out our introductory notebook](https://colab.research.google.com/github/mlop-ai/mlop/blob/main/examples/intro.ipynb) or [get an account with us today](https://app.mlop.ai/auth/sign-up)!
 
 ## Demo
 
@@ -22,12 +22,12 @@ The following clip demonstrates benefits of using **MLOP** (bottom left) over co
 
 Start logging your experiments with **MLOP** in 4 simple steps:
 
-1. Get an account at [demo.mlop.ai](https://demo.mlop.ai/auth/sign-up)
+1. Get an account at [app.mlop.ai](https://app.mlop.ai/auth/sign-up)
 2. Install our Python SDK. Within a Python environment, open a Terminal window and paste in the following,
 ```bash
-pip install mlop[dev]
+pip install "mlop[full] @ git+https://github.com/mlop-ai/mlop.git"
 ```
-3. Log in to your [mlop.ai](https://demo.mlop.ai/o) account from within the Python client,
+3. Log in to your [mlop.ai](https://app.mlop.ai/o) account from within the Python client,
 ```python
 import mlop
 mlop.login()

@@ -10,9 +10,10 @@ import traceback
 from collections.abc import Mapping
 
 from .api import (
-    make_compat_check_v1,
+    make_compat_alert_v1,
     make_compat_monitor_v1,
     make_compat_start_v1,
+    make_compat_trigger_v1,
     make_compat_webhook_v1,
 )
 from .auth import login
@@ -73,7 +74,7 @@ class OpMonitor:
                     self.op._iface._post_v1(
                         self.op.settings.url_trigger,
                         self.op._iface.headers,
-                        make_compat_check_v1(self.op.settings),
+                        make_compat_trigger_v1(self.op.settings),
                         client=self.op._iface.client,
                     )
                     if self.op._iface
@@ -205,14 +206,19 @@ class Op:
     ):
         message = kwargs.get("text", message)
         wait = kwargs.get("wait_duration", wait)
-        url = url or self.settings.url_webhook
+        url = url or self.settings.url_webhook or None
 
         t = time.time()
         time.sleep(wait)
         if logging._nameToLevel.get(level) is not None:
             logger.log(logging._nameToLevel[level], f"{tag}: {title}: {message}")
         if remote or not url:  # force remote alert
-            pass
+            self._iface._post_v1(
+                self.settings.url_alert,
+                self._iface.headers,
+                make_compat_alert_v1(self.settings, t, message, title, level, url, **kwargs),
+                client=self._iface.client,
+            ) if self._iface else None
         else:
             self._iface._post_v1(
                 url,
