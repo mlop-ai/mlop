@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import signal
+from datetime import datetime
 
 from .data import Histogram
 from .util import clean_dict, find_node
@@ -202,3 +203,38 @@ def make_compat_graph_nodes_v1(d, ref, dep=0, p="", r={}):
             make_compat_graph_nodes_v1(d=c, ref=ref, dep=dep + 1, p=name, r=r)
 
     return r
+
+
+def make_compat_webhook_v1(timestamp, level, title, message, step, url):
+    return json.dumps(
+        {
+            "username": __name__.split(".")[0],
+            "content": f"{level}: {title}",
+            "embeds": [
+                {
+                    "description": message,
+                    "footer": {
+                        "text": f"Step: {step} at {datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')}"
+                    },
+                }
+            ],
+            # slack
+            "text": f"{level}: {title}",
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": (
+                            f"`{level}` *{title}:* {message}\n\n"
+                            f"*Step:* {step}\n"
+                            f"*Local Time:* <!date^{int(timestamp)}^"
+                            + "{date_short_pretty} {time_secs}"
+                            + "|Time>\n"
+                            f"_<{url}|See live updates about this run>_"
+                        ),
+                    },
+                }
+            ],
+        }
+    ).encode()

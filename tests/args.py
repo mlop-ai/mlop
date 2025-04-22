@@ -162,13 +162,6 @@ def read_sets_compat(args, tag):
         if tag == "metric":  # TODO: fix store implementation
             d["disable_store"] = True
             # d["x_log_level"] = 10
-        elif tag == "trigger":
-            d["trigger"] = {
-                "val/trigger": {
-                    "operator": "<=",
-                    "threshold": 0.8,
-                }
-            }
 
     if args.proxy == "e" or args.debug == "test":
         d["http_proxy"] = "http://localhost:8888"

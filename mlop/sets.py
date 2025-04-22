@@ -18,7 +18,7 @@ class Settings:
     mode: str = "perf"  # noop | debug | perf
     meta: list = None
     message: queue.Queue = queue.Queue()
-    trigger: dict[str, any] = {}
+    alert: dict[str, any] = {}
     disable_store: bool = True  # TODO: make false
     disable_iface: bool = False
     disable_logger: bool = False  # disable file-based logging
@@ -51,6 +51,7 @@ class Settings:
     x_grad_label: str = "grad"
     x_param_label: str = "param"
 
+    url_webhook: str = None
     _url: str = "https://app.mlop.ai"
     url_token: str = f"{_url}/api-keys"
     _url_py: str = "https://py-prod.mlop.ai"

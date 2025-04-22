@@ -13,8 +13,10 @@ from .api import (
     make_compat_check_v1,
     make_compat_monitor_v1,
     make_compat_start_v1,
+    make_compat_webhook_v1,
 )
 from .auth import login
+from .compat.torch import _watch_torch
 from .data import Data
 from .file import Audio, File, Image, Text, Video
 from .iface import ServerInterface
@@ -183,6 +185,46 @@ class Op:
             logger.critical("%s: interrupted %s", tag, e)
         logger.debug(f"{tag}: finished")
         teardown_logger(logger, console=logging.getLogger("console"))
+
+    def watch(self, module, **kwargs):
+        if any(b.__module__.startswith("torch.nn") for b in module.__class__.__bases__):
+            return _watch_torch(module, op=self, **kwargs)
+        else:
+            logger.error(f"{tag}: unsupported module type {module.__class__.__name__}")
+            return None
+
+    def alert(
+        self,
+        message=None,
+        title=__name__.split(".")[0],
+        level="INFO",
+        wait=0,
+        url=None,
+        remote=False,
+        **kwargs,
+    ):
+        message = kwargs.get("text", message)
+        wait = kwargs.get("wait_duration", wait)
+        url = kwargs.get("url", self.settings.url_webhook)
+
+        t = time.time()
+        if remote or not url:  # force remote alert
+            pass
+        else:
+            if logging._nameToLevel.get(level) is not None:
+                logger.log(logging._nameToLevel[level], f"{tag}: {title}: {message}")
+            time.sleep(wait)
+            self._iface._post_v1(
+                url,
+                self._iface.headers,
+                make_compat_webhook_v1(t, level, title, message, self._step, self.settings.url_view),
+                self._iface.client,  # TODO: check client
+            ) if self._iface else logger.warning(
+                f"{tag}: alert not sent since interface is disabled"
+            )
+
+    def check(self, data, **kwargs):
+        pass
 
     def _worker(self, stop) -> None:
         while not stop() or not self._queue.empty():

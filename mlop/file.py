@@ -154,8 +154,7 @@ class Audio(File):
         **kwargs,
     ) -> None:
         # TODO: remove legacy compat
-        if "sample_rate" in kwargs:
-            rate = kwargs["sample_rate"]
+        rate = kwargs.get("sample_rate", rate)
 
         self._name = caption or f"{uuid.uuid4()}"
         self._id = f"{uuid.uuid4()}{uuid.uuid4()}".replace("-", "")
@@ -195,8 +194,7 @@ class Video(File):
         format: str | None = None,
         **kwargs,
     ) -> None:
-        if "fps" in kwargs:
-            rate = kwargs["fps"]
+        rate = kwargs.get("fps", rate)
 
         self._name = caption or f"{uuid.uuid4()}"
         self._id = f"{uuid.uuid4()}{uuid.uuid4()}".replace("-", "")

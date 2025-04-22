@@ -14,29 +14,28 @@ logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Torch"
 
 
-def watch(
+def _watch_torch(
     module: "torch.nn.Module",
     disable_graph: bool = False,
     disable_grad: bool = False,
     disable_param: bool = False,
     freq: Optional[int] = 1000,
     bins: Optional[int] = 64,
+    op = None,
     **kwargs,
 ):
     # TODO: remove legacy compat
     if "log" in kwargs:
         disable_grad = kwargs["log"] not in ["gradients", "all"]
         disable_param = kwargs["log"] not in ["parameters", "all"]
-    if "log_freq" in kwargs:
-        freq = kwargs["log_freq"]
-    if "log_graph" in kwargs:
-        disable_graph = not kwargs["log_graph"]
+    freq = kwargs.get("log_freq", freq)
+    disable_graph = not kwargs.get("log_graph", not disable_graph)
 
     if mlop.ops is None or len(mlop.ops) == 0:
         logger.critical(f"{tag}: no runs to attach, please call mlop.init() first")
         return
     else:
-        op = mlop.ops[-1]
+        op = mlop.ops[-1] if not op else op
         op._torch, module._nodes = module, {}
 
     if not disable_grad and not hasattr(module, "_hook_grad"):

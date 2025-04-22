@@ -157,7 +157,7 @@ class System:
                 if d["dirty"]:
                     d["diff"]["head"] = run_cmd(cmd + " HEAD")
         except Exception as e:
-            logger.warning(
+            logger.debug(
                 "%s: git: repository not detected: (%s) %s",
                 tag,
                 e.__class__.__name__,
@@ -237,13 +237,13 @@ class System:
                     dev = (
                         str(pynvml.nvmlDeviceGetName(h))[2:-1].lower().replace(" ", "_")
                     )
-                    d[f"{p}gpu/nvda/{dev}/pct"] = pynvml.nvmlDeviceGetUtilizationRates(
+                    d[f"{p}/gpu/nvda/{dev}/pct"] = pynvml.nvmlDeviceGetUtilizationRates(
                         h
                     ).gpu
-                    d[f"{p}gpu/nvda/{dev}/mem/pct"] = (
+                    d[f"{p}/gpu/nvda/{dev}/mem/pct"] = (
                         pynvml.nvmlDeviceGetUtilizationRates(h).memory
                     )
-                    d[f"{p}gpu/nvda/{dev}/power"] = pynvml.nvmlDeviceGetPowerUsage(h)
+                    d[f"{p}/gpu/nvda/{dev}/power"] = pynvml.nvmlDeviceGetPowerUsage(h)
         return d
 
     @PendingDeprecationWarning
