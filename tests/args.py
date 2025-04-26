@@ -132,10 +132,9 @@ def read_sets_compat(args, tag):
         print(f"{tag}: Using mlop")
         import mlop
 
-        if args.lib == "d" or args.lib == "l":
+        if args.lib == "d":
             # d["auth"] = AUTH
-            if args.lib == "d":
-                urls = URL_LIST["DEV"]
+            urls = URL_LIST["DEV"]
 
             d["_url"] = urls["APP"]
             d["_url_api"] = urls["API"]
@@ -154,6 +153,9 @@ def read_sets_compat(args, tag):
             d["url_file"] = f"{d['_url_ingest']}/files"
             d["url_message"] = f"{d['_url_ingest']}/ingest/logs"
             d["url_view"] = None
+        
+        if args.lib == "l":
+            d["_host"] = "127.0.0.1"
 
         if args.debug == "db":
             d["disable_iface"] = True

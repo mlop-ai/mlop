@@ -25,12 +25,7 @@ class OpInit:
         return op
 
     def setup(self, settings) -> None:
-        init_settings = Settings()
-        setup_settings = sets.setup(settings=init_settings).settings
-
-        # TODO: handle login and settings validation here
-        setup_settings.update(settings)
-        self.settings = setup_settings
+        self.settings = settings
         self.settings.meta = []  # TODO: find a better way to de-reference meta
 
 
@@ -69,3 +64,11 @@ def init(
     except Exception as e:
         logger.critical("%s: failed, %s", tag, e)  # add early logger
         raise e
+
+
+def finish(op: Op = None) -> None:
+    if op:
+        op.finish()
+    else:
+        for op in mlop.ops:
+            op.finish()

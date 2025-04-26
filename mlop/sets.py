@@ -12,6 +12,7 @@ class Settings:
     dir: str = str(os.path.abspath(os.getcwd()))
 
     _auth: str = None
+    _host: str = None
     _sys: dict[str, any] = {}
     compat: dict[str, any] = {}
     project: str = "default"
@@ -51,37 +52,49 @@ class Settings:
     x_grad_label: str = "grad"
     x_param_label: str = "param"
 
-    url_webhook: str = None
-    _url: str = "https://app.mlop.ai"
-    url_token: str = f"{_url}/api-keys"
-    _url_py: str = "https://py-prod.mlop.ai"
-    url_alert: str = f"{_url_py}/api/runs/alert"
-    url_trigger: str = f"{_url_py}/api/runs/trigger"
-    _url_api: str = "https://api-prod.mlop.ai"
-    url_login: str = f"{_url_api}/api/slug"
-    url_start: str = f"{_url_api}/api/runs/create"
-    url_stop: str = f"{_url_api}/api/runs/status/update"
-    url_meta: str = f"{_url_api}/api/runs/logName/add"
-    url_graph: str = f"{_url_api}/api/runs/modelGraph/create"
-    _url_ingest: str = "https://ingest-prod.mlop.ai"
-    url_num: str = f"{_url_ingest}/ingest/metrics"
-    url_data: str = f"{_url_ingest}/ingest/data"
-    url_file: str = f"{_url_ingest}/files"
-    url_message: str = f"{_url_ingest}/ingest/logs"
-    url_view: str = None
+    def __init__(self, host: str = None):
+        host = host or self._host
+        self._url: str = "https://app.mlop.ai" if not host else f"http://{host}:3000"
+        self._url_api: str = (
+            "https://api-prod.mlop.ai" if not host else f"http://{host}:3001"
+        )
+        self._url_ingest: str = (
+            "https://ingest-prod.mlop.ai" if not host else f"http://{host}:3003"
+        )
+        self._url_py: str = (
+            "https://py-prod.mlop.ai" if not host else f"http://{host}:3004"
+        )
+        self.url_token: str = f"{self._url}/api-keys"
+        self.url_login: str = f"{self._url_api}/api/slug"
+        self.url_start: str = f"{self._url_api}/api/runs/create"
+        self.url_stop: str = f"{self._url_api}/api/runs/status/update"
+        self.url_meta: str = f"{self._url_api}/api/runs/logName/add"
+        self.url_graph: str = f"{self._url_api}/api/runs/modelGraph/create"
+        self.url_num: str = f"{self._url_ingest}/ingest/metrics"
+        self.url_data: str = f"{self._url_ingest}/ingest/data"
+        self.url_file: str = f"{self._url_ingest}/files"
+        self.url_message: str = f"{self._url_ingest}/ingest/logs"
+        self.url_alert: str = f"{self._url_py}/api/runs/alert"
+        self.url_trigger: str = f"{self._url_py}/api/runs/trigger"
+        self.url_view: str = None
+        self.url_webhook: str = None
 
     def update(self, settings) -> None:
         if isinstance(settings, Settings):
             settings = settings.to_dict()
         for key, value in settings.items():
             setattr(self, key, value)
+        self.__init__(host=self._host)
 
     def to_dict(self) -> dict[str, any]:
         return {key: getattr(self, key) for key in self.__annotations__.keys()}
 
     def get_dir(self) -> str:
         return os.path.join(
-            self.dir, "." + self.tag, self.project, self._op_name, # str(self._op_id)
+            self.dir,
+            "." + self.tag,
+            self.project,
+            self._op_name,  # str(self._op_id)
         )
 
     def _nb(self) -> bool:
@@ -100,16 +113,6 @@ class Settings:
             or "kaggle_environments" in sys.modules
             or "kaggle" in sys.modules
         )
-
-
-class OpSetup:
-    def __init__(self, settings: Settings | None = None) -> None:
-        self.settings = settings
-
-
-def setup(settings: Settings | None = None) -> OpSetup:
-    logger.debug(f"{tag}: loading settings")
-    return OpSetup(settings=settings)
 
 
 def get_console() -> str:
