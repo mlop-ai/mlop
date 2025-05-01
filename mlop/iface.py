@@ -3,6 +3,7 @@ import queue
 import sys
 import threading
 import time
+from typing import Any, Dict, List, Union
 
 import httpx
 import keyring
@@ -148,11 +149,11 @@ class ServerInterface:
 
     def publish(
         self,
-        num: dict[str, any] | None = None,
-        data: dict[str, any] | None = None,
-        file: dict[str, any] | None = None,
-        timestamp: int | None = None,
-        step: int | None = None,
+        num: Union[Dict[str, Any], None] = None,
+        data: Union[Dict[str, Any], None] = None,
+        file: Union[Dict[str, Any], None] = None,
+        timestamp: Union[int, None] = None,
+        step: Union[int, None] = None,
     ) -> None:
         with self._lock_progress:  # enforce one thread at a time
             self._total += 1
@@ -204,7 +205,7 @@ class ServerInterface:
         self._update_status(self.settings)
         logger.info(f"{tag}: find uploaded data at {print_url(self.settings.url_view)}")
 
-    def _update_status(self, settings, trace=None):
+    def _update_status(self, settings, trace: Union[Any, None] = None):
         r = self._post_v1(
             self.settings.url_stop,
             self.headers,
@@ -212,7 +213,11 @@ class ServerInterface:
             client=self.client_api,
         )
 
-    def _update_meta(self, num=None, df=None):
+    def _update_meta(
+        self,
+        num: Union[List[str], None] = None,
+        df: Union[Dict[str, List[str]], None] = None,
+    ):
         self._thread_meta = threading.Thread(
             target=self._worker_meta, args=(num, df), daemon=True
         )
@@ -337,7 +342,16 @@ class ServerInterface:
             except queue.Empty:
                 break
 
-    def _try(self, method, url, headers, content, name=None, q=None, retry=0):
+    def _try(
+        self,
+        method,
+        url,
+        headers,
+        content,
+        name: Union[str, None] = None,
+        q: Union[queue.Queue, None] = None,
+        retry=0,
+    ):
         if retry >= self.settings.x_file_stream_retry_max:
             logger.critical(f"{tag}: {name}: failed after {retry} retries")
             return None
@@ -381,7 +395,7 @@ class ServerInterface:
             name=name,
         )
 
-    def _post_v1(self, url, headers, q, client, name="post"):
+    def _post_v1(self, url, headers, q, client, name: Union[str, None] = "post"):
         b, r = [], None
         content = self._queue_iter(q, b) if isinstance(q, queue.Queue) else q
 

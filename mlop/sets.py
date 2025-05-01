@@ -2,6 +2,7 @@ import logging
 import os
 import queue
 import sys
+from typing import Any, Dict, List
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Setup"
@@ -12,11 +13,11 @@ class Settings:
     dir: str = str(os.path.abspath(os.getcwd()))
 
     _auth: str = None
-    _sys: dict[str, any] = {}
-    compat: dict[str, any] = {}
+    _sys: Dict[str, Any] = {}
+    compat: Dict[str, Any] = {}
     project: str = "default"
     mode: str = "perf"  # noop | debug | perf
-    meta: list = None
+    meta: List[Any] = None
     message: queue.Queue = queue.Queue()
     disable_store: bool = True  # TODO: make false
     disable_iface: bool = False
@@ -93,7 +94,7 @@ class Settings:
         self.url_alert = f"{self.url_py}/api/runs/alert"
         self.url_trigger = f"{self.url_py}/api/runs/trigger"
 
-    def to_dict(self) -> dict[str, any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {key: getattr(self, key) for key in self.__annotations__.keys()}
 
     def get_dir(self) -> str:

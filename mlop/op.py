@@ -7,7 +7,7 @@ import signal
 import threading
 import time
 import traceback
-from collections.abc import Mapping
+from typing import Any, Dict, Mapping, Union
 
 import mlop
 
@@ -53,7 +53,7 @@ class OpMonitor:
             )
             self._thread_monitor.start()
 
-    def stop(self, code: int | None = None) -> None:
+    def stop(self, code: Union[int, None] = None) -> None:
         self._stop_event.set()
         for t in [self._thread, self._thread_monitor]:
             if t is not None:
@@ -156,7 +156,10 @@ class Op:
         mlop.log, mlop.alert, mlop.watch = self.log, self.alert, self.watch
 
     def log(
-        self, data: dict[str, any], step: int | None = None, commit: bool | None = None
+        self,
+        data: Dict[str, Any],
+        step: Union[int, None] = None,
+        commit: Union[bool, None] = None,
     ) -> None:
         """Log run data"""
         if self.settings.mode == "perf":
@@ -164,7 +167,7 @@ class Op:
         else:  # bypass queue
             self._log(data=data, step=step)
 
-    def finish(self, code: int | None = None) -> None:
+    def finish(self, code: Union[int, None] = None) -> None:
         """Finish logging"""
         try:
             self._monitor.stop(code)
@@ -258,7 +261,7 @@ class Op:
                 logger.critical("%s: failed: %s", tag, e)
                 raise e
 
-    def _log(self, data, step, t=None) -> None:
+    def _log(self, data, step: Union[int, None], t: Union[float, None] = None) -> None:
         if not isinstance(data, Mapping):
             e = ValueError(
                 f"Data logged must be of dictionary type; received {type(data).__name__} intsead"

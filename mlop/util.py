@@ -10,7 +10,7 @@ import subprocess
 import sys
 import time
 import uuid
-from typing import Sequence, Union
+from typing import Any, Dict, Sequence, Union
 
 from .sets import get_console
 
@@ -99,7 +99,9 @@ def run_cmd(cmd="ls", timeout=10):
         return None
 
     try:
-        r = subprocess.run(cmd.split(), check=False, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(
+            cmd.split(), check=False, capture_output=True, text=True, timeout=timeout
+        )
         if r.returncode == 0:
             return r.stdout
         else:
@@ -183,7 +185,7 @@ def clean_dict(d):
     return c
 
 
-def dict_to_json(data: dict[str, any]) -> dict:
+def dict_to_json(data: Dict[str, Any]) -> Dict[str, Any]:
     for key in list(data):  # avoid RuntimeError if dict size changes
         val = data[key]
         if isinstance(val, dict):
@@ -193,7 +195,7 @@ def dict_to_json(data: dict[str, any]) -> dict:
     return data
 
 
-def val_to_json(val: any) -> Union[Sequence, dict]:
+def val_to_json(val: Any) -> Union[Sequence, Dict, Any]:
     if isinstance(val, (int, float, str, bool)):
         return val
     elif isinstance(val, (list, tuple, range)):

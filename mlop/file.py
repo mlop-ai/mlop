@@ -27,7 +27,7 @@ class File:
     def __init__(
         self,
         path: str,
-        name: str | None = None,
+        name: Union[str, None] = None,
     ) -> None:
         self._path = os.path.abspath(path)
         self._id = self._hash()
@@ -65,7 +65,7 @@ class File:
 class Text(File):
     tag = "Text"
 
-    def __init__(self, data: str, caption: str | None = None) -> None:
+    def __init__(self, data: str, caption: Union[str, None] = None) -> None:
         self._name = caption or f"{uuid.uuid4()}"
         self._id = f"{uuid.uuid4()}{uuid.uuid4()}".replace("-", "")
         self._ext = ".txt"
@@ -95,7 +95,7 @@ class Image(File):
     def __init__(
         self,
         data: Union[str, "PILImage.Image", np.ndarray],
-        caption: str | None = None,
+        caption: Union[str, None] = None,
     ) -> None:
         self._name = caption or f"{uuid.uuid4()}"
         self._id = f"{uuid.uuid4()}{uuid.uuid4()}".replace("-", "")
@@ -147,8 +147,8 @@ class Audio(File):
     def __init__(
         self,
         data: Union[str, np.ndarray],
-        rate: int | None = 48000,
-        caption: str | None = None,
+        rate: Union[int, None] = 48000,
+        caption: Union[str, None] = None,
         **kwargs,
     ) -> None:
         # TODO: remove legacy compat
@@ -187,9 +187,9 @@ class Video(File):
     def __init__(
         self,
         data: Union[str, np.ndarray],
-        rate: int | None = 30,
-        caption: str | None = None,
-        format: str | None = None,
+        rate: Union[int, None] = 30,
+        caption: Union[str, None] = None,
+        format: Union[str, None] = None,
         **kwargs,
     ) -> None:
         rate = kwargs.get("fps", rate)

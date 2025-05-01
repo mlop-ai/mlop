@@ -14,7 +14,7 @@ _stderr = sys.stderr
 
 colors = {
     "DEBUG": ANSI.green,
-    "INFO": ANSI.blue,
+    "INFO": ANSI.cyan,
     "WARNING": ANSI.yellow,
     "ERROR": ANSI.red,
     "CRITICAL": ANSI.purple,
@@ -30,7 +30,7 @@ styles = {
 
 class ColorFormatter(logging.Formatter):
     def format(self, record):
-        prefix = ANSI.bold + ANSI.blue + f"{__name__.split('.')[0]}:" + ANSI.reset
+        prefix = ANSI.bold + ANSI.cyan + f"{__name__.split('.')[0]}:" + ANSI.reset
         color = colors.get(record.levelname, "")
         style = styles.get(record.levelname, "")
         # record.msg = f"{color}{record.msg}{ANSI.reset}"

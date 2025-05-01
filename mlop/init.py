@@ -2,6 +2,7 @@ import logging
 import os
 import time
 from datetime import datetime
+from typing import Any, Dict, Union
 
 import mlop
 
@@ -17,7 +18,7 @@ tag = "Init"
 class OpInit:
     def __init__(self, config) -> None:
         self.kwargs = None
-        self.config: dict[str, any] = config
+        self.config: Dict[str, Any] = config
 
     def init(self) -> Op:
         op = Op(config=self.config, settings=self.settings)
@@ -30,12 +31,12 @@ class OpInit:
 
 
 def init(
-    dir: str | None = None,
-    project: str | None = None,
-    name: str | None = None,
+    dir: Union[str, None] = None,
+    project: Union[str, None] = None,
+    name: Union[str, None] = None,
     # id: str | None = None,
-    config: dict | str | None = None,
-    settings: Settings | dict[str, any] | None = {},
+    config: Union[dict, str, None] = None,
+    settings: Union[Settings, Dict[str, Any], None] = {},
 ) -> Op:
     if not isinstance(settings, Settings):  # isinstance(settings, dict)
         default = Settings()
@@ -60,7 +61,7 @@ def init(
         raise e
 
 
-def finish(op: Op = None) -> None:
+def finish(op: Union[Op, None] = None) -> None:
     if op:
         op.finish()
     else:
