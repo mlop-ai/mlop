@@ -14,11 +14,20 @@ if TYPE_CHECKING:
     from lightning.pytorch.utilities.rank_zero import rank_zero_only
 else:
     torch = import_lib("torch")
-    Logger = import_lib("lightning.pytorch.loggers").Logger
-    rank_zero_only = import_lib("lightning.pytorch.utilities.rank_zero").rank_zero_only
-    _scan_checkpoints = import_lib(
-        "lightning.pytorch.loggers.utilities"
-    )._scan_checkpoints
+    ModelCheckpoint = getattr(
+        import_lib("lightning.pytorch.callbacks.model_checkpoint"),
+        "ModelCheckpoint",
+        object,
+    )
+    Logger = getattr(import_lib("lightning.pytorch.loggers"), "Logger", object)
+    rank_zero_only = getattr(
+        import_lib("lightning.pytorch.utilities.rank_zero"),
+        "rank_zero_only",
+        lambda fn: fn,
+    )
+    _scan_checkpoints = getattr(
+        import_lib("lightning.pytorch.loggers.utilities"), "_scan_checkpoints", None
+    )
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Lightning"
@@ -35,6 +44,7 @@ class MLOPLogger(Logger):
             if "project" not in kwargs:
                 kwargs["project"] = "lightning"
             self.op = mlop.init(**kwargs)
+        self._checkpoint: Optional[ModelCheckpoint] = None
         self._time = {}
 
     @property
@@ -51,6 +61,15 @@ class MLOPLogger(Logger):
         return self.op
 
     @property
+    def root_dir(self) -> Optional[str]:
+        return self.op.settings.get_dir()
+        # return os.fspath(self.op.settings.get_dir()).parent
+
+    @property
+    def save_dir(self) -> Optional[str]:
+        return self.op.settings.get_dir()
+
+    @property
     def log_dir(self) -> Optional[str]:
         return self.op.settings.get_dir()
 
@@ -58,14 +77,9 @@ class MLOPLogger(Logger):
     def group_separator(self) -> str:
         return "."
 
-    @property
-    def root_dir(self) -> Optional[str]:
-        return self.op.settings.get_dir()
-        # return os.fspath(self.op.settings.get_dir()).parent
-
     @rank_zero_only
     def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None):
-        self.op._log(data=metrics, step=step)
+        self.op.log(data=metrics, step=step)
 
     @rank_zero_only
     def log_hyperparams(self, params: Union[Dict[str, Any], Namespace]) -> None:
@@ -104,7 +118,7 @@ class MLOPLogger(Logger):
                     )
                 ]
             }
-            self.op._log(data=d, step=step)
+            self.op.log(data=d, step=step)
         except Exception as e:
             logger.error(
                 f"{tag}: Error creating or logging {ftype.__name__} for key '{key}': {e}"
@@ -129,9 +143,11 @@ class MLOPLogger(Logger):
         self.log_file(key, videos, step, ftype=mlop.Video, **kwargs)
 
     def save(self) -> None:
+        return  # TODO: add save
         self.op._iface.save()
 
     def finish(self) -> None:
+        return  # TODO: add finish
         self.save()
         self.op.finish()
 
@@ -139,7 +155,7 @@ class MLOPLogger(Logger):
         self, checkpoint: "ModelCheckpoint", step: Optional[int] = None
     ) -> None:
         for t, p, s, _ in _scan_checkpoints(checkpoint, self._time):
-            self.op._log(
+            self.op.log(
                 data={
                     "model": mlop.Artifact(
                         data=p,
@@ -157,3 +173,7 @@ class MLOPLogger(Logger):
 
     def watch(self, model: "torch.nn.Module", **kwargs: Any) -> None:
         self.op.watch(model, **kwargs)
+
+    def finalize(self, status: str) -> None:
+        if status == "success":
+            self.log_checkpoint(self._checkpoint) if self._checkpoint else None

@@ -73,7 +73,7 @@ def import_lib(m, a="None"):
                 globals()[a] = module
             return module
         except ImportError:
-            logger.error(
+            logger.info(
                 f"{tag}: {m} not installed; module-related functionality will be disabled"
             )
             return None

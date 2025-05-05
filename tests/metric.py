@@ -15,28 +15,27 @@ def test_metric(mlop, run, NUM_EPOCHS=None, ITEM_PER_EPOCH=None):
 
     WAIT_INT = 1_000
     WAIT = ITEM_PER_EPOCH * 0.0005
-    
+
     # exponential decay
     decay_rate = 0.0001
-    noise_scale = 0.5 
+    noise_scale = 0.5
 
     run.alert(
-        message=f"run started with {NUM_EPOCHS} epochs",
+        text=f"run started with {NUM_EPOCHS} epochs",
         title=TAG,
-        level="INFO",
-        remote=True,
-        email=True,
     )
 
     for i in range(NUM_EPOCHS):
         base_value = math.exp(-decay_rate * i)
-        run.log({
-            f"val/{TAG}-{j}": base_value + (random.random() - 0.5) * noise_scale 
-            for j in range(ITEM_PER_EPOCH)
-        })
+        run.log(
+            {
+                f"val/{TAG}-{j}": base_value + (random.random() - 0.5) * noise_scale
+                for j in range(ITEM_PER_EPOCH)
+            }
+        )
         run.log({f"{TAG}-total": i + 1})
         if i % WAIT_INT == 0:
-            print(f"{TAG}: Epoch {i + 1} / {NUM_EPOCHS}, sleeping {WAIT}s")
+            print(f"{TAG}: Epoch {i + 1} / {NUM_EPOCHS}, sleeping {WAIT} seconds")
             time.sleep(WAIT)
 
 

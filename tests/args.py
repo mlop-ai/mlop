@@ -165,6 +165,6 @@ def read_sets_compat(args, tag):
 @timer
 def init_test(TAG):
     mlop, settings = read_sets_compat(parse(TAG), TAG)
-    run = mlop.init(project="test-" + TAG, settings=settings)
+    run = mlop.init(dir=".mlop", project="test-" + TAG, settings=settings)
     sys.stderr.write("script: Started stderr logging\n")
     return mlop, run

@@ -197,10 +197,19 @@ class Op:
             logger.critical("%s: interrupted %s", tag, e)
         logger.debug(f"{tag}: finished")
         teardown_logger(logger, console=logging.getLogger("console"))
-        mlop.ops = [op for op in mlop.ops if op != self]
+        
+        self.settings.meta = []
+        mlop.ops = [
+            op for op in mlop.ops if op.settings._op_id != self.settings._op_id
+        ]  # TODO: make more efficient
 
     def watch(self, module, **kwargs):
-        if any(b.__module__.startswith(("torch.nn", "lightning.pytorch", "pytorch_lightning.core.module")) for b in module.__class__.__bases__):
+        if any(
+            b.__module__.startswith(
+                ("torch.nn", "lightning.pytorch", "pytorch_lightning.core.module")
+            )
+            for b in module.__class__.__bases__
+        ):
             return _watch_torch(module, op=self, **kwargs)
         else:
             logger.error(f"{tag}: unsupported module type {module.__class__.__name__}")
@@ -213,11 +222,14 @@ class Op:
         level="INFO",
         wait=0,
         url=None,
-        remote=False,
+        remote=True,
         **kwargs,
     ):
+        # TODO: remove legacy compat
         message = kwargs.get("text", message)
         wait = kwargs.get("wait_duration", wait)
+        kwargs["email"] = kwargs.get("email", True)
+        
         url = url or self.settings.url_webhook or None
 
         t = time.time()

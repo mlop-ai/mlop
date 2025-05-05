@@ -1,4 +1,5 @@
 .mlop
+.lightning
 *.pt
 *.onnx*
 MNIST
