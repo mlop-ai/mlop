@@ -70,7 +70,7 @@ class Artifact(File):
         self,
         data: str = None,
         caption: Union[str, None] = None,
-        metadata: dict = {},
+        metadata: dict = dict(),
         **kwargs,
     ) -> None:
         self._name = caption + f".{uuid.uuid4()}" if caption else f"{uuid.uuid4()}"

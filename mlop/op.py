@@ -197,7 +197,7 @@ class Op:
             logger.critical("%s: interrupted %s", tag, e)
         logger.debug(f"{tag}: finished")
         teardown_logger(logger, console=logging.getLogger("console"))
-        
+
         self.settings.meta = []
         mlop.ops = [
             op for op in mlop.ops if op.settings._op_id != self.settings._op_id
@@ -206,7 +206,7 @@ class Op:
     def watch(self, module, **kwargs):
         if any(
             b.__module__.startswith(
-                ("torch.nn", "lightning.pytorch", "pytorch_lightning.core.module")
+                ("torch.nn", "lightning.pytorch", "pytorch_lightning.core.module", "transformers.models")
             )
             for b in module.__class__.__bases__
         ):

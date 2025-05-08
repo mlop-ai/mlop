@@ -16,7 +16,7 @@ from .api import (
     make_compat_meta_v1,
     make_compat_num_v1,
     make_compat_start_v1,
-    make_compat_stop_v1,
+    make_compat_status_v1,
     make_compat_storage_v1,
 )
 from .log import _stderr
@@ -220,7 +220,7 @@ class ServerInterface:
         r = self._post_v1(
             self.settings.url_stop,
             self.headers,
-            make_compat_stop_v1(self.settings, trace),
+            make_compat_status_v1(self.settings, trace),
             client=self.client_api,
         )
 

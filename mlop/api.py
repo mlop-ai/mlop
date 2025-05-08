@@ -49,7 +49,7 @@ def make_compat_start_v1(config, settings, info):
     ).encode()
 
 
-def make_compat_stop_v1(settings, trace=None):
+def make_compat_status_v1(settings, trace=None):
     return json.dumps(
         {
             "runId": settings._op_id,

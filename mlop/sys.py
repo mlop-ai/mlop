@@ -54,8 +54,8 @@ class System:
             self.pid_child: List[int] = [p.pid for p in self.proc_child] + [self.pid]
 
         self.requirements: List[str] = [
-            f"{p.metadata['Name']}=={p.version}"
-            for p in importlib.metadata.distributions()
+            f"{p.metadata.get('Name')}=={p.version}"
+            for p in importlib.metadata.distributions() if p.metadata
         ]
         if self.settings.mode == "debug":  # privacy guard
             self.environ: Dict[str, str] = self.proc.environ()
