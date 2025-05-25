@@ -1,12 +1,10 @@
 -r ../requirements.txt
 
-#git+https://github.com/georgeharker/pyinstrument.git
+#pyinstrument
 #py-spy
 #pycurl
 #requests
 
-numpy<2
 onnx
 pytorch
 torchvision
-#pytorch torchvision -c pytorch

@@ -1,5 +1,5 @@
 [project]
-version = "0.0.2rc3"
+version = "0.0.2rc4"
 name = "mlop"
 authors = [
     {name = "jqssun", email = "jqssun+git@googlemail.com"},
@@ -16,6 +16,7 @@ dependencies = [
   "keyrings.alt",
   "pillow",
   "psutil",
+  "pynvml",
   "rich",
   "soundfile"
 ]

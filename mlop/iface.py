@@ -1,12 +1,10 @@
 import logging
 import queue
-import sys
 import threading
 import time
 from typing import Any, Dict, List, Union
 
 import httpx
-import keyring
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
@@ -31,9 +29,6 @@ class ServerInterface:
     def __init__(self, config: dict, settings: Settings) -> None:
         self.config = config
         self.settings = settings
-        self.settings._auth = keyring.get_password(
-            f"{self.settings.tag}", f"{self.settings.tag}"
-        )
 
         # self.url_view = f"{self.settings.url_view}/{self.settings.user}/{self.settings.project}/{self.settings._op_id}"
         self.headers = {

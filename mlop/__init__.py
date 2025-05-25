@@ -2,10 +2,8 @@ from .auth import login, logout
 from .data import Data, Graph, Histogram, Table
 from .file import Artifact, Audio, File, Image, Text, Video
 from .init import finish, init
-from .sets import Settings
+from .sets import Settings, setup
 from .sys import System
-
-# TODO: setup preinit
 
 _hooks = []
 ops, log, watch, alert = None, None, None, None
@@ -29,6 +27,7 @@ __all__ = (
     "logout",
     "watch",
     "finish",
+    "setup",
 )
 
 __version__ = "0.0.2"

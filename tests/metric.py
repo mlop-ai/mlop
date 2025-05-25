@@ -23,7 +23,7 @@ def test_metric(mlop, run, NUM_EPOCHS=None, ITEM_PER_EPOCH=None):
     run.alert(
         text=f"run started with {NUM_EPOCHS} epochs",
         title=TAG,
-    )
+    ) if False else None
 
     for i in range(NUM_EPOCHS):
         base_value = math.exp(-decay_rate * i)

@@ -2,7 +2,7 @@ import logging
 import os
 import queue
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
 tag = "Settings"
@@ -145,3 +145,10 @@ def get_console() -> str:
         return "ipython"
     else:
         return "jupyter"
+
+
+def setup(settings: Union[Settings, Dict[str, Any], None] = None) -> None:
+    if not isinstance(settings, Settings):
+        settings = Settings()
+    settings.update(settings)
+    return settings

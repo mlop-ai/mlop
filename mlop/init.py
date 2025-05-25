@@ -1,14 +1,10 @@
 import logging
-import os
-import time
-from datetime import datetime
 from typing import Any, Dict, Union
 
 import mlop
 
-from . import sets
 from .op import Op
-from .sets import Settings
+from .sets import Settings, setup
 from .util import gen_id, get_char
 
 logger = logging.getLogger(f"{__name__.split('.')[0]}")
@@ -41,11 +37,7 @@ def init(
     # TODO: remove legacy compat
     dir = kwargs.get("save_dir", dir)
 
-    if not isinstance(settings, Settings):  # isinstance(settings, dict)
-        default = Settings()
-        default.update(settings)
-        settings = default
-
+    settings = setup(settings)
     settings.dir = dir if dir else settings.dir
     settings.project = get_char(project) if project else settings.project
     settings._op_name = (

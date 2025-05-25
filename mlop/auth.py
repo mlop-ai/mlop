@@ -7,7 +7,7 @@ import httpx
 import keyring
 
 from .log import setup_logger, teardown_logger
-from .sets import Settings, get_console
+from .sets import get_console, setup
 from .util import ANSI, import_lib, print_url
 
 tlogger = logging.getLogger("auth")
@@ -15,12 +15,12 @@ tag = "Authentication"
 
 
 def login(settings=None, retry=False):
-    settings = settings or Settings()
-    settings.update(settings)
+    settings = setup(settings)
     setup_logger(settings=settings, logger=tlogger)
     try:
+        assert sys.platform == "darwin"
         auth = keyring.get_password(f"{settings.tag}", f"{settings.tag}")
-    except keyring.errors.NoKeyringError:  # fallback
+    except (keyring.errors.NoKeyringError, AssertionError):  # fallback
         keyring.set_keyring(import_lib("keyrings.alt.file").PlaintextKeyring())
         auth = keyring.get_password(f"{settings.tag}", f"{settings.tag}")
     if settings._auth is None:
@@ -60,7 +60,9 @@ def login(settings=None, retry=False):
         tlogger.info(
             f"{tag}: initializing authentication\n\n {hint1}\n\n {hint2}\n\n {hint3}\n"
         )
-        if hasattr(settings._sys, "monitor") and settings._sys.monitor() == {}:  # migrate mode
+        if (
+            hasattr(settings._sys, "monitor") and settings._sys.monitor() == {}
+        ):  # migrate mode
             return
         else:
             webbrowser.open(url=settings.url_token)
@@ -81,12 +83,12 @@ def login(settings=None, retry=False):
 
 
 def logout(settings=None):
-    settings = settings or Settings()
-    settings.update(settings)
+    settings = setup(settings)
     setup_logger(settings=settings, logger=tlogger)
     try:
+        assert sys.platform == "darwin"
         keyring.delete_password(f"{settings.tag}", f"{settings.tag}")
-    except keyring.errors.NoKeyringError:
+    except (keyring.errors.NoKeyringError, AssertionError):
         keyring.set_keyring(import_lib("keyrings.alt.file").PlaintextKeyring())
         keyring.delete_password(f"{settings.tag}", f"{settings.tag}")
     except Exception as e:

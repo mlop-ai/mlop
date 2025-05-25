@@ -2,7 +2,6 @@ import importlib.metadata
 import logging
 import os
 import platform
-import sys
 import time
 from typing import Any, Dict, List, Optional, Union
 
