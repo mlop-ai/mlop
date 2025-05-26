@@ -1,5 +1,5 @@
 [project]
-version = "0.0.2rc4"
+version = "0.0.2rc5"
 name = "mlop"
 authors = [
     {name = "jqssun", email = "jqssun+git@googlemail.com"},
