@@ -477,7 +477,7 @@ def get_val(v: Any):
         elif isinstance(v, bytes):
             v = v.decode('utf-8')
 
-        if isinstance(v, (float, int)) and not math.isnan(v):
+        if isinstance(v, (float, int)) and math.isfinite(v):
             return v
     except Exception as e:
         logger.debug('%s: %s', tag, e)

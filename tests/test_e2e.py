@@ -132,9 +132,9 @@ def test_e2e_update_config():
     run.finish()
 
     server_config = pq.get_run(TESTING_PROJECT_NAME, run_id).get('config', {})
-    assert (
-        server_config['lr'] == 0.01
-    ), f"Server has lr={server_config.get('lr')}, expected 0.01"
+    assert server_config['lr'] == 0.01, (
+        f'Server has lr={server_config.get("lr")}, expected 0.01'
+    )
     assert server_config['arch'] == 'resnet50'
     assert server_config['epochs'] == 100
 
@@ -223,9 +223,9 @@ def test_e2e_list_runs_by_tag():
 
     runs = pq.list_runs(TESTING_PROJECT_NAME, tags=[unique_tag])
     found_ids = [r['id'] for r in runs]
-    assert (
-        run_id in found_ids
-    ), f"Run {run_id} not found when filtering by tag '{unique_tag}'"
+    assert run_id in found_ids, (
+        f"Run {run_id} not found when filtering by tag '{unique_tag}'"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -246,9 +246,9 @@ def test_e2e_metrics_logged():
     metric_names = _poll_metric_names(
         TESTING_PROJECT_NAME, run_id, ['train/loss', 'train/acc']
     )
-    assert (
-        'train/loss' in metric_names
-    ), f"'train/loss' not in server metric names: {metric_names}"
+    assert 'train/loss' in metric_names, (
+        f"'train/loss' not in server metric names: {metric_names}"
+    )
     assert 'train/acc' in metric_names
 
     # Check metric values
@@ -262,6 +262,40 @@ def test_e2e_metrics_logged():
     assert len(values) == 10
     assert values[0] == pytest.approx(1.0, abs=1e-6)
     assert values[-1] == pytest.approx(0.1, abs=1e-6)
+
+
+def test_e2e_nan_inf_metrics():
+    """Verify NaN and +/-Infinity are stored as 0 and don't break the pipeline."""
+    run = pluto.init(project=TESTING_PROJECT_NAME, name=get_task_name(), config={})
+    run_id = run.settings._op_id
+
+    # Log a mix of normal, NaN, +Inf, and -Inf values
+    run.log({'naninf/loss': 1.0})
+    run.log({'naninf/loss': float('nan')})
+    run.log({'naninf/loss': float('inf')})
+    run.log({'naninf/loss': float('-inf')})
+    run.log({'naninf/loss': 0.5})
+    run.finish()
+
+    # Metric should exist on server
+    metric_names = _poll_metric_names(TESTING_PROJECT_NAME, run_id, ['naninf/loss'])
+    assert 'naninf/loss' in metric_names, (
+        f"'naninf/loss' not in server metric names: {metric_names}"
+    )
+
+    # Read back values — NaN and Inf should have been replaced with 0
+    metrics = pq.get_metrics(TESTING_PROJECT_NAME, run_id, metric_names=['naninf/loss'])
+    if hasattr(metrics, 'to_dict'):
+        values = metrics['value'].tolist()
+    else:
+        values = [m['value'] for m in metrics]
+
+    assert len(values) == 5, f'Expected 5 metric points, got {len(values)}'
+    assert values[0] == pytest.approx(1.0, abs=1e-6)
+    assert values[1] == pytest.approx(0.0, abs=1e-6), 'NaN should be stored as 0'
+    assert values[2] == pytest.approx(0.0, abs=1e-6), '+Inf should be stored as 0'
+    assert values[3] == pytest.approx(0.0, abs=1e-6), '-Inf should be stored as 0'
+    assert values[4] == pytest.approx(0.5, abs=1e-6)
 
 
 def test_e2e_metric_statistics():
@@ -304,9 +338,9 @@ def test_e2e_image_upload(tmp_path):
         check=lambda fs: any('red-square' in f['fileName'] for f in fs),
     )
     file_names = [f['fileName'] for f in files]
-    assert any(
-        'red-square' in name for name in file_names
-    ), f"Image 'red-square' not found in server files: {file_names}"
+    assert any('red-square' in name for name in file_names), (
+        f"Image 'red-square' not found in server files: {file_names}"
+    )
 
     # Download and verify actual image content
     try:
@@ -433,9 +467,9 @@ def test_e2e_multiple_metrics_single_log():
     expected = ['multi/loss', 'multi/accuracy', 'multi/lr']
     metric_names = _poll_metric_names(TESTING_PROJECT_NAME, run_id, expected)
     for name in expected:
-        assert (
-            name in metric_names
-        ), f"'{name}' not in server metric names: {metric_names}"
+        assert name in metric_names, (
+            f"'{name}' not in server metric names: {metric_names}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -534,9 +568,9 @@ def test_e2e_full_lifecycle():
         check=lambda fs: any('green' in f['fileName'] for f in fs),
     )
     file_names = [f['fileName'] for f in files]
-    assert any(
-        'green' in name for name in file_names
-    ), f'Image not found in server files: {file_names}'
+    assert any('green' in name for name in file_names), (
+        f'Image not found in server files: {file_names}'
+    )
 
     # Verify the image content survived the round-trip
     matched = [f for f in files if 'green' in f['fileName']][0]
@@ -547,6 +581,6 @@ def test_e2e_full_lifecycle():
             downloaded = PILImage.open(io.BytesIO(resp.content))
             assert downloaded.size == (4, 4), f'Expected 4x4, got {downloaded.size}'
             r, g, b = downloaded.convert('RGB').getpixel((0, 0))
-            assert (
-                g > 100 and r < 50 and b < 50
-            ), f'Expected green pixel, got ({r},{g},{b})'
+            assert g > 100 and r < 50 and b < 50, (
+                f'Expected green pixel, got ({r},{g},{b})'
+            )
