@@ -1149,21 +1149,21 @@ class TestNeptuneCompatSignalHandlingTransparency:
             run = Run(experiment_name='signal-test')
 
             # Verify x_disable_signal_handlers is True when Neptune is enabled
-            assert (
-                captured_settings.get('x_disable_signal_handlers') is True
-            ), 'x_disable_signal_handlers must be True when Neptune is enabled'
+            assert captured_settings.get('x_disable_signal_handlers') is True, (
+                'x_disable_signal_handlers must be True when Neptune is enabled'
+            )
 
             # Verify signal handlers were NOT changed by Pluto
             current_sigint = signal.getsignal(signal.SIGINT)
             current_sigterm = signal.getsignal(signal.SIGTERM)
 
             # The handlers should be the same as before (Pluto didn't register)
-            assert (
-                current_sigint == initial_sigint
-            ), 'SIGINT handler should not be changed by Pluto compat layer'
-            assert (
-                current_sigterm == initial_sigterm
-            ), 'SIGTERM handler should not be changed by Pluto compat layer'
+            assert current_sigint == initial_sigint, (
+                'SIGINT handler should not be changed by Pluto compat layer'
+            )
+            assert current_sigterm == initial_sigterm, (
+                'SIGTERM handler should not be changed by Pluto compat layer'
+            )
 
             run.close()
 
@@ -1201,9 +1201,9 @@ class TestNeptuneCompatSignalHandlingTransparency:
 
             # Verify x_disable_signal_handlers is False when Neptune is disabled
             # (Pluto should handle signals since Neptune won't)
-            assert (
-                captured_settings.get('x_disable_signal_handlers') is False
-            ), 'x_disable_signal_handlers must be False when Neptune is disabled'
+            assert captured_settings.get('x_disable_signal_handlers') is False, (
+                'x_disable_signal_handlers must be False when Neptune is disabled'
+            )
 
             run.close()
 
@@ -1279,9 +1279,9 @@ class TestNeptuneCompatSignalHandlingTransparency:
             elapsed = time.time() - start
 
             # Should complete within timeout + buffer (not hang for 100s)
-            assert (
-                elapsed < 10
-            ), f'close() took {elapsed}s, should be < 10s (timeout should work)'
+            assert elapsed < 10, (
+                f'close() took {elapsed}s, should be < 10s (timeout should work)'
+            )
 
     def test_pluto_cleanup_silent_on_error(
         self, mock_neptune_backend, pluto_config_env
@@ -1390,17 +1390,17 @@ class TestNeptuneCompatSignalHandlingTransparency:
                 run = Run(experiment_name='atexit-test')
 
                 # Verify an atexit handler was registered
-                assert (
-                    len(registered_handlers) > 0
-                ), 'atexit handler should be registered'
+                assert len(registered_handlers) > 0, (
+                    'atexit handler should be registered'
+                )
 
                 # The handler should be the wrapper's cleanup method
                 handler_names = [
                     h.__name__ for h in registered_handlers if hasattr(h, '__name__')
                 ]
-                assert (
-                    '_atexit_cleanup_pluto' in handler_names
-                ), 'atexit handler should be _atexit_cleanup_pluto'
+                assert '_atexit_cleanup_pluto' in handler_names, (
+                    'atexit handler should be _atexit_cleanup_pluto'
+                )
 
                 run.close()
 
@@ -1427,9 +1427,9 @@ class TestNeptuneCompatSignalHandlingTransparency:
             elapsed = time.time() - start
 
             # Should complete quickly due to timeout
-            assert (
-                elapsed < 10
-            ), f'Context manager exit took {elapsed}s, should be < 10s'
+            assert elapsed < 10, (
+                f'Context manager exit took {elapsed}s, should be < 10s'
+            )
 
     def test_wrapper_closed_flag_prevents_double_cleanup(
         self, mock_neptune_backend, pluto_config_env
@@ -1458,9 +1458,9 @@ class TestNeptuneCompatSignalHandlingTransparency:
             run.__exit__(None, None, None)
 
             # Pluto finish should only be called once
-            assert (
-                finish_call_count == 1
-            ), f'Pluto finish called {finish_call_count} times, should be 1'
+            assert finish_call_count == 1, (
+                f'Pluto finish called {finish_call_count} times, should be 1'
+            )
 
 
 class TestNeptuneSeededRandom:
@@ -1487,9 +1487,9 @@ class TestNeptuneSeededRandom:
             state_after = random.getstate()
             run.close()
 
-            assert (
-                state_before == state_after
-            ), 'Neptune compat layer should preserve global random state'
+            assert state_before == state_after, (
+                'Neptune compat layer should preserve global random state'
+            )
 
 
 @pytest.fixture()
@@ -1543,7 +1543,7 @@ class TestNeptuneCompatLiveBackend:
         run2.close()
 
         assert id1 != id2, (
-            'Fresh runs with same experiment_name ' 'must get distinct server IDs'
+            'Fresh runs with same experiment_name must get distinct server IDs'
         )
 
     def test_resume_reattaches_to_existing_run(self, live_pluto_env):

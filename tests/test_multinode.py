@@ -320,9 +320,9 @@ class TestMultiNodeUsagePatterns:
             run.finish()
 
         # All should have the same server ID
-        assert all(
-            sid == server_ids[0] for sid in server_ids
-        ), f'All ranks should log to same run, got IDs: {server_ids}'
+        assert all(sid == server_ids[0] for sid in server_ids), (
+            f'All ranks should log to same run, got IDs: {server_ids}'
+        )
 
         # First should not be resumed, rest should be
         assert resumed_flags[0] is False
@@ -465,9 +465,9 @@ class TestMultiNodeE2E:
         dist.all_gather_object(all_resumed, is_resumed)
 
         # Verify all ranks got the same server run ID
-        assert all(
-            sid == all_server_ids[0] for sid in all_server_ids
-        ), f'All ranks should have same server ID, got: {all_server_ids}'
+        assert all(sid == all_server_ids[0] for sid in all_server_ids), (
+            f'All ranks should have same server ID, got: {all_server_ids}'
+        )
 
         # Exactly one rank should have resumed=False (the first to create)
         num_not_resumed = sum(1 for r in all_resumed if r is False)

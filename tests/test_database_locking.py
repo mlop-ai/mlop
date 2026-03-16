@@ -174,9 +174,9 @@ class TestSyncStoreRetryBehavior:
 
         t.join(timeout=30)
 
-        assert (
-            result['error'] is None
-        ), f'enqueue should have retried: {result["error"]}'
+        assert result['error'] is None, (
+            f'enqueue should have retried: {result["error"]}'
+        )
         assert result['id'] is not None and result['id'] > 0
 
         store.close()
@@ -217,9 +217,9 @@ class TestSyncStoreRetryBehavior:
 
         t.join(timeout=30)
 
-        assert (
-            result['error'] is None
-        ), f'mark_in_progress should retry: {result["error"]}'
+        assert result['error'] is None, (
+            f'mark_in_progress should retry: {result["error"]}'
+        )
 
         store.close()
 

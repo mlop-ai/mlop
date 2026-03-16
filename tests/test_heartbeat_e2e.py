@@ -185,9 +185,9 @@ class TestHeartbeatE2E:
             monitor.stop()
 
             timestamps = trigger_stats['timestamps']
-            assert (
-                len(timestamps) >= 3
-            ), f'Expected >=3 heartbeats in 5s, got {len(timestamps)}'
+            assert len(timestamps) >= 3, (
+                f'Expected >=3 heartbeats in 5s, got {len(timestamps)}'
+            )
 
             # Check spacing between consecutive heartbeats
             gaps = [
