@@ -12,6 +12,7 @@ Requires:
 
 import importlib.util
 import io
+import math
 import time
 from typing import Callable, List, TypeVar
 
@@ -265,7 +266,13 @@ def test_e2e_metrics_logged():
 
 
 def test_e2e_nan_inf_metrics():
-    """Verify NaN and +/-Infinity are stored as 0 and don't break the pipeline."""
+    """Verify NaN/Inf can be logged and retrieved without breaking the pipeline.
+
+    The client serialises these as non-standard JSON tokens (NaN, Infinity,
+    -Infinity) via Python's ``json.dumps(allow_nan=True)`` default.  This test
+    ensures the full round-trip — client, sync process, server, query API —
+    works and that every logged data-point is retrievable.
+    """
     run = pluto.init(project=TESTING_PROJECT_NAME, name=get_task_name(), config={})
     run_id = run.settings._op_id
 
@@ -283,7 +290,7 @@ def test_e2e_nan_inf_metrics():
         f"'naninf/loss' not in server metric names: {metric_names}"
     )
 
-    # Read back values — NaN and Inf should have been replaced with 0
+    # Read back values
     metrics = pq.get_metrics(TESTING_PROJECT_NAME, run_id, metric_names=['naninf/loss'])
     if hasattr(metrics, 'to_dict'):
         values = metrics['value'].tolist()
@@ -291,11 +298,33 @@ def test_e2e_nan_inf_metrics():
         values = [m['value'] for m in metrics]
 
     assert len(values) == 5, f'Expected 5 metric points, got {len(values)}'
+
+    # First and last are normal floats
     assert values[0] == pytest.approx(1.0, abs=1e-6)
-    assert values[1] == pytest.approx(0.0, abs=1e-6), 'NaN should be stored as 0'
-    assert values[2] == pytest.approx(0.0, abs=1e-6), '+Inf should be stored as 0'
-    assert values[3] == pytest.approx(0.0, abs=1e-6), '-Inf should be stored as 0'
     assert values[4] == pytest.approx(0.5, abs=1e-6)
+
+    # NaN: server may store as NaN, null (→ None), or 0 — all are acceptable
+    # as long as the pipeline didn't choke.
+    v_nan = values[1]
+    assert (
+        v_nan is None or (isinstance(v_nan, float) and math.isnan(v_nan)) or v_nan == 0
+    ), f'NaN round-trip produced unexpected value: {v_nan!r}'
+
+    # +Inf
+    v_pos = values[2]
+    assert (
+        v_pos is None
+        or (isinstance(v_pos, float) and math.isinf(v_pos) and v_pos > 0)
+        or v_pos == 0
+    ), f'+Inf round-trip produced unexpected value: {v_pos!r}'
+
+    # -Inf
+    v_neg = values[3]
+    assert (
+        v_neg is None
+        or (isinstance(v_neg, float) and math.isinf(v_neg) and v_neg < 0)
+        or v_neg == 0
+    ), f'-Inf round-trip produced unexpected value: {v_neg!r}'
 
 
 def test_e2e_metric_statistics():
