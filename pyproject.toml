@@ -21,13 +21,13 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 GitPython = ">=3.1"
 httpx = { extras = ["http2"], version = ">=0.24,<1.0" }
 keyring = ">=24.0"
 keyrings-alt = ">=5.0"
 numpy = "^2.0"
-pillow = ">=10.0"
+pillow = ">=13.0.0"  # security floor (Pillow 13.0.0 CVEs); requires Python >=3.11
 psutil = ">=5.9"
 nvidia-ml-py = ">=11.515.0"
 rich = ">=13.0"
@@ -53,7 +53,7 @@ types-pyyaml = "^6.0.12.20241230"
 # Floors are the security minimums (GHSA-rrmf-rvhw-rf47); without them poetry
 # is free to resolve backwards. torchvision pins torch exactly (0.28.0 ->
 # torch==2.13.0), and its own requires_python excludes 3.14.1 — which the
-# project's ^3.10 range includes. Without mirroring that marker here, poetry
+# project's ^3.11 range includes. Without mirroring that marker here, poetry
 # cannot satisfy the full range and silently falls back to torchvision 0.12.0
 # (requires_python >=3.7), which has no wheels for 3.11+.
 #
@@ -64,9 +64,9 @@ types-pyyaml = "^6.0.12.20241230"
 # failed on 3.11+. The cap makes them simply not apply on 3.15 instead.
 # These are dev-only test deps, so this does not constrain what end users
 # can install pluto-ml on; lift it when upstream ships cp315 wheels.
-torch = { version = ">=2.13.0", python = ">=3.10,<3.15" }
+torch = { version = ">=2.13.0", python = ">=3.11,<3.15" }
 matplotlib = "^3.10"
-torchvision = { version = ">=0.28.0", python = "!=3.14.1,>=3.10,<3.15" }
+torchvision = { version = ">=0.28.0", python = "!=3.14.1,>=3.11,<3.15" }
 imageio = "^2.37.0"
 moviepy = "^1.0.3"
 omegaconf = "^2.3"
@@ -108,7 +108,7 @@ select = ["F", "E", "W", "I001"]
 quote-style = "single"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
